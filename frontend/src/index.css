@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+body {
+  font-family: 'Orbitron', sans-serif;
+  color: #fff; /* sets a default light color for text */
+  @apply bg-gray-900;
+}
+
+
+/* .neon-text {
+  text-shadow: 0 0 5px #ffffff, 0 0 10px #ffffff, 0 0 15px #ffffff;
+} */
+ .neon-text1 {
+  text-shadow: 0 0 10px #0ff, 0 0 20px #00f, 0 0 30px #0ff;
+} 
+
+  
+  .neon-glow {
+    animation: glow 1.5s infinite alternate;
+  }
+  
+  /* @keyframes glow {
+    0% {
+      text-shadow: 0 0 5px #ffffff, 0 0 10px #ffffff, 0 0 15px #ffffff;
+    }
+    100% {
+      text-shadow: 0 0 10px #0ff, 0 0 20px #00f, 0 0 30px #0ff;
+    }
+  } */
+  
+  
+  
+  
+  .neon-border {
+    border: 2px solid rgba(0, 255, 255, 0.7);
+    box-shadow: 0 0 8px rgba(0, 255, 255, 0.7);
+  }
+  
+  .text-neon-blue {
+    color: #00d4ff;
+  }
+  
+  .text-neon-green {
+    color: #00ff6a;
+  }
+  
+  .text-neon-yellow {
+    color: #ffcc00;
+  }
+
+  .text-neon-red {
+    color: #ed1a1a;
+  }
+  
