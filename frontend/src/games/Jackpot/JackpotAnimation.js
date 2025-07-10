@@ -4,148 +4,128 @@ const CARD_WIDTH = 80;
 const CONTAINER_WIDTH = 400;
 const TAPE_LENGTH = 100;
 
-// Easing function for smooth deceleration
-const easeOut = (t) => 1 - Math.pow(1 - t, 5); 
+// Easing for smooth deceleration
+const easeOut = (t) => 1 - Math.pow(1 - t, 5);
 
-/**
- * JackpotAnimation
- * Handles rendering and animating the scrolling tape of player avatars.
- */
-const JackpotAnimation = ({ 
-  players, 
-  winnerId, 
-  startAnimation, 
-  onAnimationEnd, 
-  animationStartTimeFromServer, 
-  serverTargetOffset 
+const JackpotAnimation = ({
+  players,
+  winnerId,
+  startAnimation,
+  onAnimationEnd,
+  animationStartTimeFromServer,
+  tapeRef
 }) => {
   const containerRef = useRef(null);
-  const tapeRef = useRef(null);
-  const animationFrameIdRef = useRef(null);
-  const isAnimationRunningRef = useRef(false);
-  const lastAnimationStartTime = useRef(null);
-  const hasRenderedTapeRef = useRef(false); 
+  const animFrameRef = useRef(null);
+  const hasRenderedRef = useRef(false);
+  const localOffsetRef = useRef(0);
 
-  // Stabilize values so they don’t change mid-animation.
-  const stableAnimationStartTime = useMemo(() => animationStartTimeFromServer, [animationStartTimeFromServer]);
-  const stableTargetOffset = useMemo(() => serverTargetOffset, [serverTargetOffset]);
+  // Stabilize the server start time
+  const startTime = useMemo(
+    () => new Date(animationStartTimeFromServer).getTime(),
+    [animationStartTimeFromServer]
+  );
 
-  /** 
-   * Call this when animation completes 
-   */
-  const handleAnimationEnd = useCallback(() => {
-    isAnimationRunningRef.current = false;
-    setTimeout(() => {
-      if (onAnimationEnd) onAnimationEnd();
-    }, 500);
+  // Finish callback
+  const finish = useCallback(() => {
+    cancelAnimationFrame(animFrameRef.current);
+    setTimeout(onAnimationEnd, 500);
   }, [onAnimationEnd]);
 
-/**
-   * Renders the full tape of player avatars once.
-   */
-    useEffect(() => {
-    if (!tapeRef.current || !players || players.length === 0) {
-      console.error("[ERROR] Tape is missing or players are empty!");
-      return;
-    }
-    if (hasRenderedTapeRef.current) return;
-    
-    tapeRef.current.innerHTML = ""; // Clear previous tape elements
+  // ── BUILD & RENDER TAPE ───────────────────────────────────────────────
+  useEffect(() => {
+    // whenever we start a new run, allow rebuild
+    hasRenderedRef.current = false;
+  }, [startAnimation]);
 
-    // Repeat players to fill tape
-    const tapePlayers = [];
-    for (let i = 0; i < TAPE_LENGTH; i++) {
-      // Cycle through players
-      const player = players[i % players.length];
-      tapePlayers.push(player);
-    }
+  useEffect(() => {
+    if (!tapeRef.current || !players?.length || hasRenderedRef.current) return;
 
-    
-    tapePlayers.forEach((player) => {
-      const item = document.createElement("div");
-      item.style.display = "inline-block";
-      item.style.width = `${CARD_WIDTH}px`;
-      item.style.height = `${CARD_WIDTH}px`;
-      item.style.lineHeight = `${CARD_WIDTH}px`;
-      item.style.textAlign = "center";
-      item.style.borderRadius = "50%";
-      item.style.marginRight = "5px";
-      item.style.backgroundColor = player.avatar_color || "#ccc";
-      item.style.color = "#fff";
-      item.style.fontWeight = "bold";
-      item.style.flexShrink = "0";
-      item.style.minWidth = `${CARD_WIDTH}px`;
-      item.innerText = player.avatar_initials || (player.email ? player.email[0].toUpperCase() : "?");
-
-      // Highlight the winning entry
-      if (String(player.user_id) === String(winnerId)) {
-        item.style.border = "3px solid gold";
-      }
-
-      tapeRef.current.appendChild(item);
+    // 1) Build weighted pool
+    const total = players.reduce((sum, p) => sum + Number(p.wager_amount), 0);
+    let pool = [];
+    players.forEach((p) => {
+      const slots = Math.max(Math.round((p.wager_amount / total) * 100), 1);
+      for (let i = 0; i < slots; i++) pool.push(p);
     });
 
-    hasRenderedTapeRef.current = true;
-  }, [players]);
+    // 2) Shuffle for suspense
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
 
-  /**
-   * Runs the animation when startAnimation is true.
-   */
+    // 3) Tile to exactly TAPE_LENGTH
+    let tape = [];
+    while (tape.length < TAPE_LENGTH) tape = tape.concat(pool);
+    tape = tape.slice(0, TAPE_LENGTH);
+
+    // 4) Compute offset so winner lands in center
+    const winIdx = tape.findIndex((p) => String(p.user_id) === String(winnerId));
+    const centerCorrection = CONTAINER_WIDTH / 2 - CARD_WIDTH / 2;
+    localOffsetRef.current = winIdx * CARD_WIDTH - centerCorrection;
+
+    // 5) Render DOM
+    tapeRef.current.innerHTML = "";
+    tape.forEach((p) => {
+      const div = document.createElement("div");
+      Object.assign(div.style, {
+        display: "inline-block",
+        width: `${CARD_WIDTH}px`,
+        height: `${CARD_WIDTH}px`,
+        lineHeight: `${CARD_WIDTH}px`,
+        textAlign: "center",
+        borderRadius: "50%",
+        marginRight: "5px",
+        backgroundColor: p.avatar_color || "#ccc",
+        color: "#fff",
+        fontWeight: "bold",
+        flexShrink: 0,
+        minWidth: `${CARD_WIDTH}px`,
+      });
+      div.textContent = p.avatar_initials || p.email[0].toUpperCase();
+      if (String(p.user_id) === String(winnerId)) {
+        div.style.border = "3px solid gold";
+      }
+      tapeRef.current.appendChild(div);
+    });
+
+    hasRenderedRef.current = true;
+  }, [players, winnerId, tapeRef, startAnimation]);
+  // ────────────────────────────────────────────────────────────────────────
+
+  // ── ANIMATION EFFECT ─────────────────────────────────────────────────
   useEffect(() => {
     if (!startAnimation) return;
-  
-    // Reset the tape render flag so the tape re-renders on each animation run.
-    hasRenderedTapeRef.current = false;
-
-    const animationStart = stableAnimationStartTime;
-    const targetOffset = stableTargetOffset;
-    isAnimationRunningRef.current = true;
-
-    const totalDuration = 8000; // total duration in ms (8 seconds)
-
+    // rebuild guard already reset above
+    const duration = 8000;
     const animate = () => {
-      const now = Date.now();
-      const elapsed = now - animationStart;
-      // Clamp elapsed time between 0 and totalDuration
-      const t = Math.min(elapsed / totalDuration, 1);
-      // Compute current offset using a single easing function
-      const currentOffset = targetOffset * easeOut(t);
-
-      if (tapeRef.current) {
-        tapeRef.current.style.transform = `translateX(-${currentOffset}px)`;
-      }
-
+      const elapsed = Date.now() - startTime;
+      const t = Math.max(0, Math.min(elapsed / duration, 1));
+      const offset = localOffsetRef.current * easeOut(t);
+      tapeRef.current.style.transform = `translateX(-${offset}px)`;
       if (t < 1) {
-        animationFrameIdRef.current = requestAnimationFrame(animate);
+        animFrameRef.current = requestAnimationFrame(animate);
       } else {
-        handleAnimationEnd();
-        isAnimationRunningRef.current = false;
+        finish();
       }
-  };
+    };
 
-  animationFrameIdRef.current = requestAnimationFrame(animate);
+    animFrameRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animFrameRef.current);
+  }, [startAnimation, startTime, finish]);
+  // ────────────────────────────────────────────────────────────────────────
 
-  return () => {
-    if (animationFrameIdRef.current) {
-      cancelAnimationFrame(animationFrameIdRef.current);
-    }
-  };
-}, [startAnimation, stableAnimationStartTime, stableTargetOffset]);
-
-  /**
-   * Render UI
-   */
   return (
     <div
       ref={containerRef}
       style={{
-        width: `${CONTAINER_WIDTH}px`,
-        height: "150px",
+        width: CONTAINER_WIDTH,
+        height: 150,
         overflow: "hidden",
         margin: "0 auto",
         border: "2px solid white",
-        padding: "10px",
-        borderRadius: "10px",
+        borderRadius: 10,
         background: "#222",
         position: "relative",
         display: "flex",
@@ -153,20 +133,20 @@ const JackpotAnimation = ({
         justifyContent: "center",
       }}
     >
-      {/* Center Indicator Line */}
+      {/* Center indicator */}
       <div
         style={{
           position: "absolute",
           left: "50%",
-          top: "0",
-          bottom: "0",
-          width: "4px",
+          top: 0,
+          bottom: 0,
+          width: 4,
           backgroundColor: "#fff",
           transform: "translateX(-50%)",
           zIndex: 10,
         }}
       />
-      {/* Tape */}
+      {/* The tape */}
       <div
         ref={tapeRef}
         style={{

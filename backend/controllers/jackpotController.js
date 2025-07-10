@@ -789,18 +789,6 @@ const updateAnimationTime = async (req, res) => {
 
 
 
-  
-  
-  
-  
-
-
-
-
-
-
-  
-
   module.exports = { createJackpotGame, getOpenJackpotGames, joinJackpotGame, getJackpotPlayers, closeExpiredJackpotGames, scheduleGameClosure, scheduleExistingGames, getJackpotHistory, updateAnimationTime };
   
   
