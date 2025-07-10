@@ -1,10 +1,8 @@
-import axios from "axios";
-
-const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api/time`;
+import axios from "../../utils/axios";
 
 export const fetchServerTime = async () => {
   try {
-    const { data } = await axios.get(API_URL);
+    const { data } = await axios.get("/api/time");
     return data.serverTime; 
   } catch (error) {
     console.error("[ERROR] Error fetching server time:", error);

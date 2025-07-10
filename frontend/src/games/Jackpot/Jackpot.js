@@ -15,12 +15,11 @@
 
 import React, { useEffect, useState, useContext, useRef, useMemo, useCallback } from "react";
 import { SocketContext } from "../../context/SocketContext";
-import axios from "axios";
+import axios from "../../utils/axios";
 import JackpotAnimation from "./JackpotAnimation";
 import useClockOffset from "../../hooks/useClockOffset"; 
 
 
-const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api/jackpot`;
 
 const Jackpot = () => {
 
@@ -77,9 +76,7 @@ const Jackpot = () => {
       }
       const { game: savedGame, gameStartTime } = parsed;
       if (savedGame.status === "open" || savedGame.status === "in_progress") {
-        const token = localStorage.getItem("authToken");
-        axios
-          .get(`${API_URL}/open`, { headers: { Authorization: `Bearer ${token}` } })
+        axios.get("/api/jackpot/open")
           .then(({ data }) => {
             const games = data.games;
             if (games && games.length > 0 && games[0].id === savedGame.id) {
@@ -122,9 +119,7 @@ const Jackpot = () => {
     if (phaseRef.current !== "playing") return;
     try {
       const token = localStorage.getItem("authToken");
-      const { data } = await axios.get(`${API_URL}/open`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const { data } = await axios.get("/api/jackpot/open");
       const games = data.games;
       if (games && games.length > 0) {
         const currentGame = games[0];
@@ -155,9 +150,7 @@ const Jackpot = () => {
         console.error("[ERROR] No auth token found.");
         return;
       }
-      const { data } = await axios.get(`${API_URL}/history`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const { data } = await axios.get("/api/jackpot/history");
       if (data.success) {
         setPastGames(data.games);
       }
@@ -172,11 +165,7 @@ const Jackpot = () => {
     try {
       finishedRef.current = false;
       const token = localStorage.getItem("authToken");
-      const { data } = await axios.post(
-        `${API_URL}/create`,
-        { time_limit: 10 },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const { data } = await axios.post("/api/jackpot/create", { time_limit: 10 });
       const game = data.game;
       setActiveGame(game);
       setPlayers([]);
@@ -203,19 +192,16 @@ const Jackpot = () => {
 
     try {
         const token = localStorage.getItem("authToken");
-        const { data } = await axios.post(
-            `${API_URL}/join`,
-            { gameId: activeGame.id, wager_amount: parseFloat(betAmount) },
-            { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const { data } = await axios.post("/api/jackpot/join", {
+          gameId: activeGame.id,
+          wager_amount: parseFloat(betAmount)
+        });
 
         if (data.updated_game) {
             setActiveGame(data.updated_game);
             socket.emit("joinGameRoom", { gameId: activeGame.id });
 
-            const { data: latestGame } = await axios.get(`${API_URL}/open`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const { data: latestGame } = await axios.get("/api/jackpot/open");
 
             if (latestGame.games.length > 0) {
                 setTimeLeft(Math.floor((new Date(latestGame.games[0].started_at).getTime() + (latestGame.games[0].time_limit * 1000) - Date.now()) / 1000));
@@ -234,9 +220,7 @@ const Jackpot = () => {
   const fetchPlayers = async (gameId) => {
     try {
       const token = localStorage.getItem("authToken");
-      const { data } = await axios.get(`${API_URL}/${gameId}/players`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const { data } = await axios.get(`/api/jackpot/${gameId}/players`);
       setPlayers(data.players);
       setTotalPot(data.total_pot);
     } catch (error) {
@@ -325,9 +309,8 @@ const Jackpot = () => {
         await new Promise((resolve) => setTimeout(resolve, 2000));
   
         for (let attempt = 0; attempt < 3; attempt++) {
-          const { data } = await axios.get(`${API_URL}/history`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+          const { data } = await axios.get("/api/jackpot/history");
+
   
           latestGame = data.games.find((game) => game.id === gameId);
           if (latestGame) break;

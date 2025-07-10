@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchWithAuth } from "../utils/api";
+import axios from "../utils/axios";
 
 function Home() {
   const [userData, setUserData] = useState(null);
@@ -10,7 +10,7 @@ function Home() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const data = await fetchWithAuth(`${process.env.REACT_APP_BACKEND_URL}/api/auth/home`);
+        const { data } = await axios.get("/api/auth/home");
         setUserData(data);
       } catch (err) {
         console.error("Error fetching user data:", err);

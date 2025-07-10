@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import axios from "../utils/axios";
 
 const useClockOffset = () => {
   const [offset, setOffset] = useState(0);
 
   useEffect(() => {
-    axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/time`)
+    axios.get("/api/time")
       .then((response) => {
         const serverTime = response.data.serverTime;
         const clientTime = Date.now();

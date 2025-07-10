@@ -4,6 +4,8 @@ const http = require("http");
 const { initSocket, getIo } = require("./socket"); 
 const { scheduleExistingGames } = require("./controllers/jackpotController"); 
 require("dotenv").config();
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
+
 
 
 // Import routes
@@ -20,7 +22,11 @@ const io = initSocket(server);
 
 // Middleware
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: FRONTEND_ORIGIN,
+  credentials: true
+}));
+
 
 // Routes
 app.use("/api/auth", authRoutes);
