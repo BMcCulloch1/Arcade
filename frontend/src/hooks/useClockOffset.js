@@ -5,7 +5,7 @@ const useClockOffset = () => {
   const [offset, setOffset] = useState(0);
 
   useEffect(() => {
-    axios.get("http://localhost:5000/api/time")
+    axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/time`)
       .then((response) => {
         const serverTime = response.data.serverTime;
         const clientTime = Date.now();

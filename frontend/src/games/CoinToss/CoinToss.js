@@ -241,7 +241,7 @@ useEffect(() => {
   const handleCreateGame = async (wagerAmount, coinChoice) => {
     setIsCreating(true);
     try {
-      const response = await fetch("http://localhost:5000/api/games/create", {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/games/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -280,7 +280,7 @@ useEffect(() => {
         )
       );
   
-      const response = await fetch("http://localhost:5000/api/games/join", {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/games/join`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

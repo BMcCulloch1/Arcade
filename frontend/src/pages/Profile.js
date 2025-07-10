@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
-const API_URL = "http://localhost:5000/api/auth/profile"; 
+const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api/auth/profile`; 
 
 const Profile = () => {
   const [user, setUser] = useState(null);

@@ -20,7 +20,7 @@ import JackpotAnimation from "./JackpotAnimation";
 import useClockOffset from "../../hooks/useClockOffset"; 
 
 
-const API_URL = "http://localhost:5000/api/jackpot";
+const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api/jackpot`;
 
 const Jackpot = () => {
 

@@ -10,7 +10,7 @@ function Home() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const data = await fetchWithAuth("http://localhost:5000/api/auth/home");
+        const data = await fetchWithAuth(`${process.env.REACT_APP_BACKEND_URL}/api/auth/home`);
         setUserData(data);
       } catch (err) {
         console.error("Error fetching user data:", err);

@@ -1,13 +1,14 @@
 import { io } from "socket.io-client";
 
 // Use a single socket instance
-const socket = io("http://localhost:5000", {
-  transports: ["websocket"], 
-  reconnection: true, 
-  reconnectionAttempts: 5, 
-  reconnectionDelay: 1000, 
-  autoConnect: true, 
+const socket = io(process.env.REACT_APP_BACKEND_URL, {
+  transports: ["websocket"],
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+  autoConnect: true,
 });
+
 
 // Debug logs for socket connection
 socket.on("connect", () => {
