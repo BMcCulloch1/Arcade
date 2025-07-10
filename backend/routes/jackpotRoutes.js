@@ -7,15 +7,14 @@ const { createJackpotGame, getOpenJackpotGames, joinJackpotGame,
 const router = express.Router();
 
 
-console.log("✅ Jackpot Routes File Loaded!"); // ✅ Debugging log
+console.log("[SUCCESS]  Jackpot Routes File Loaded!"); 
 
-// ✅ Test route to confirm if the file is being used
 router.get("/test", (req, res) => {
-    console.log("✅ /api/jackpot/test route was hit!"); // ✅ Debugging log
+    console.log("[SUCCESS]  /api/jackpot/test route was hit!"); 
     res.json({ success: true, message: "Jackpot API is working!" });
 });
 
-// ✅ Main route to create a jackpot game
+// Jackpot game Routes
 router.post("/create", verifyToken, createJackpotGame);
 router.get("/open", verifyToken, getOpenJackpotGames);
 router.post("/join", verifyToken, joinJackpotGame);

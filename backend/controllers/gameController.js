@@ -1,15 +1,28 @@
+/**
+ * Coin Flip Game Controller
+ * --------------------------
+ * Manages:
+ *  - Creating new games
+ *  - Listing open games
+ *  - Joining games
+ *  - Viewing game details
+ *  - Fetching user game history
+ *  - Admin/all games view
+ */
+
+
+
 const supabase = require("../utils/supabaseClient");
 const { getIo } = require("../socket");
-const crypto = require("crypto"); // Import at the top of your file
+const crypto = require("crypto"); 
 
-
-
-// Controller function to create a new game
+/**
+ * Creates a new coin flip game with wager and choice.
+ */
 const createGame = async (req, res) => {
   const { wager_amount, creator_choice } = req.body;
   const creator_id = req.user.userId;
 
-  // Validate input
   if (!wager_amount || wager_amount <= 0) {
     return res.status(400).json({ success: false, message: "Invalid wager amount." });
   }
@@ -49,10 +62,11 @@ const createGame = async (req, res) => {
 };
 
 
-// Controller function to retrieve open games
+/**
+ * Retrieves all open and in-progress games.
+ */
 const getOpenGames = async (req, res) => {
   try {
-    // Fetch open and in-progress games, including creator and opponent details
     const { data: openGames, error } = await supabase
       .from("games")
       .select(`
@@ -72,7 +86,6 @@ const getOpenGames = async (req, res) => {
       throw error;
     }
 
-    // Ensure each game has a valid created_at timestamp
     const validatedGames = openGames.map(game => ({
       id: game.id,
       wager_amount: game.wager_amount,
@@ -105,13 +118,16 @@ const getOpenGames = async (req, res) => {
 
 
 
+/**
+ * Allows a player to join an open game.
+ * Sets game to in-progress and determines winner after delay.
+ */
 
 const joinGame = async (req, res) => {
   const { gameId } = req.body;
   const opponent_id = req.user.userId;
 
   try {
-    // Check if game exists and is open
     const { data: game, error: gameError } = await supabase
       .from("games")
       .select("*")
@@ -137,7 +153,6 @@ const joinGame = async (req, res) => {
       throw updateError;
     }
 
-    // Re-fetch the updated game with the joined user details
     const { data: updatedGame, error: refetchError } = await supabase
       .from("games")
       .select(`
@@ -158,7 +173,6 @@ const joinGame = async (req, res) => {
       console.error("Error re-fetching game:", refetchError);
     }
 
-    // Format the game object to include the desired fields
     const formattedGame = {
       id: updatedGame.id,
       wager_amount: updatedGame.wager_amount,
@@ -175,19 +189,15 @@ const joinGame = async (req, res) => {
       created_at: updatedGame.created_at,
     };
 
-    console.log("⚡ Preparing gameUpdated for broadcast:", formattedGame);
+    console.log("[JOIN_GAME] Emitting gameUpdated event:", formattedGame);
     const io = getIo();
     io.emit("gameUpdated", formattedGame);
 
-    // Start coin toss timer (simulate delay for animation)
     setTimeout(async () => {
-      // Randomly determine the winner
-      const randomValue = crypto.randomInt(0, 2); // Secure random number (0 or 1)
+      const randomValue = crypto.randomInt(0, 2); 
       const winnerId = randomValue === 0 ? game.creator_id : opponent_id;
-      console.log(`Random value: ${randomValue}, Winner ID: ${winnerId}`);
+      console.log(`Coin toss result - winnerId: ${winnerId}`);
 
-      // Update game with the result and finished_at timestamp,
-      // forcing Supabase to return the updated record
       const { data: updatedFinishedGame, error: resultError } = await supabase
         .from("games")
         .update({
@@ -211,13 +221,13 @@ const joinGame = async (req, res) => {
         .eq("id", gameId)
         .maybeSingle();
 
-        console.log("Updated finished game record:", updatedFinishedGame);
+        console.log("Updated game record:", updatedFinishedGame);
 
 
       if (resultError) {
         console.error("Error updating game result:", resultError);
       } else {
-        console.log(`Game ${gameId} finished! Winner: ${winnerId}`);
+        console.log(`Game ${gameId} completed with winner ${winnerId}`);
 
         const formattedFinishedGame = {
           id: updatedFinishedGame.id,
@@ -256,12 +266,13 @@ const joinGame = async (req, res) => {
 
 
 
-  
+  /**
+ * Retrieves finished games for the requesting user.
+ */
   const getGameHistory = async (req, res) => {
     const userId = req.user.userId;
   
     try {
-      // Fetch completed games where the user was either creator or opponent
       const { data: gameHistory, error } = await supabase
         .from("games")
         .select("*")
@@ -286,12 +297,15 @@ const joinGame = async (req, res) => {
     }
   };
 
-  // Controller function to retrieve game details by ID
+
+  /**
+ * Fetches detailed information about a specific game.
+ */
 const getGameDetails = async (req, res) => {
     const { id } = req.params;
   
     try {
-      // Fetch the game by ID
+      // Fetch game by ID
       const { data: game, error } = await supabase
         .from("games")
         .select("*")
@@ -316,6 +330,9 @@ const getGameDetails = async (req, res) => {
     }
   };
 
+  /**
+ * Admin function to list all games with full details.
+ */
   const getAllGames = async (req, res) => {
     try {
       const { data: games, error } = await supabase
@@ -340,16 +357,15 @@ const getGameDetails = async (req, res) => {
         throw error;
       }
   
-      // Ensure each game has a valid created_at timestamp
       const validatedGames = games.map(game => ({
         ...game,
-        created_at: game.created_at || new Date().toISOString(), // Fallback if missing
+        created_at: game.created_at || new Date().toISOString(), 
       }));
   
       res.status(200).json({
         success: true,
         message: "All games retrieved successfully.",
-        games: validatedGames, // Send fixed games to frontend
+        games: validatedGames, 
       });
     } catch (error) {
       console.error("Error retrieving all games:", error);

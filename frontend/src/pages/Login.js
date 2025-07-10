@@ -5,23 +5,21 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false); // Loading state
+  const [isLoading, setIsLoading] = useState(false); 
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(""); // Reset errors
+    setError(""); 
 
-    // Basic validation
     if (!email.trim() || !password.trim()) {
       setError("Please enter both email and password.");
       return;
     }
 
-    setIsLoading(true); // Start loading
+    setIsLoading(true);
 
     try {
-      // Send login request to backend
       const response = await fetch("http://localhost:5000/api/auth/login", {
         method: "POST",
         headers: {
@@ -38,16 +36,14 @@ function Login() {
 
       console.log("Login Successful:", data);
 
-      // Store the token in localStorage
       localStorage.setItem("authToken", data.token);
 
-      // Redirect to the home/dashboard page
       navigate("/home");
     } catch (err) {
       console.error("Error during login:", err);
       setError(err.message || "An error occurred. Please try again later.");
     } finally {
-      setIsLoading(false); // Stop loading
+      setIsLoading(false); 
     }
   };
 

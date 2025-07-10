@@ -1,39 +1,58 @@
+/**
+ * User Registration Controller
+ * ----------------------------
+ * Handles:
+ *  - User sign-up
+ *  - Password hashing
+ *  - Avatar initials & color generation
+ */
+
 const bcrypt = require("bcrypt");
 const supabase = require("../utils/supabaseClient");
 
+/**
+ * Generates initials for the user's avatar based on their email.
+ * Supports special testuser suffix (e.g., "testuser2" -> "T2").
+ */
 const getUserInitials = (email) => {
   if (!email) return "?";
   
-  const parts = email.split(/[@._]/).filter(Boolean); // Split by `.`, `_`, `@`
+  const parts = email.split(/[@._]/).filter(Boolean); 
   let initials = parts.length > 1 
-    ? (parts[0][0] + parts[1][0]).toUpperCase()  // Two initials
-    : parts[0][0].toUpperCase();                 // One initial
+    ? (parts[0][0] + parts[1][0]).toUpperCase()  
+    : parts[0][0].toUpperCase();                
 
-  // If email contains "testuser", add a number suffix
   const match = email.match(/testuser(\d+)/);
   if (match) {
-    initials = `T${match[1]}`; // Example: "testuser2" → "T2"
+    initials = `T${match[1]}`; 
   }
 
   return initials;
 };
 
-
+/**
+ * Returns a color hex code for the avatar based on email character code.
+ */
 const getUserColor = (email) => {
   const colors = ["#FF5733", "#33FF57", "#3357FF", "#FF33A1", "#FFD700", "#00CED1"];
-  return colors[email.charCodeAt(0) % colors.length]; // Assign color based on first char
+  return colors[email.charCodeAt(0) % colors.length]; 
 };
 
+/**
+ * Registers a new user.
+ * - Checks for existing email
+ * - Hashes password
+ * - Generates avatar properties
+ * - Inserts into Supabase
+ */
 const registerUser = async (req, res) => {
   const { email, password } = req.body;
 
-  // Input validation
   if (!email || !password) {
     return res.status(400).json({ success: false, message: "All fields are required." });
   }
 
   try {
-    // Check if user already exists
     const { data: existingUser, error: existingError } = await supabase
       .from("users")
       .select("id")
@@ -48,19 +67,16 @@ const registerUser = async (req, res) => {
       return res.status(400).json({ success: false, message: "Email already registered." });
     }
 
-    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Generate avatar initials & color
     const avatar_initials = getUserInitials(email);
     const avatar_color = getUserColor(email);
 
-    // Save new user in Supabase
     const { error } = await supabase.from("users").insert([
       {
         email,
         password: hashedPassword,
-        balance: 0, // Default balance
+        balance: 0, 
         avatar_initials,
         avatar_color,
       },

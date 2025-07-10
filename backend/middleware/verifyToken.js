@@ -13,9 +13,9 @@ const verifyToken = (req, res, next) => {
   }
 
   try {
-    const verified = jwt.verify(token, process.env.JWT_SECRET); // Use secret from .env
-    req.user = verified; // Attach decoded payload to `req.user`
-    next(); // Proceed to the next middleware/route
+    const verified = jwt.verify(token, process.env.JWT_SECRET); 
+    req.user = verified; 
+    next(); 
   } catch (err) {
     console.error("Token verification failed:", err.message);
     return res.status(403).json({

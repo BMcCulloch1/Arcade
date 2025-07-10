@@ -5,9 +5,9 @@ const API_URL = "http://localhost:5000/api/time";
 export const fetchServerTime = async () => {
   try {
     const { data } = await axios.get(API_URL);
-    return data.serverTime; // Time in milliseconds
+    return data.serverTime; 
   } catch (error) {
-    console.error("❌ Error fetching server time:", error);
-    return Date.now(); // Fallback to local time
+    console.error("[ERROR] Error fetching server time:", error);
+    return Date.now(); 
   }
 };

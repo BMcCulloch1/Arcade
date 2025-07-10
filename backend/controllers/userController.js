@@ -1,8 +1,18 @@
+/**
+ * User Profile Controller
+ * ------------------------
+ * Handles:
+ *  - Retrieving the logged-in user's profile details.
+ */
+
 const supabase = require("../utils/supabaseClient");
 
+/**
+ * Returns the profile of the authenticated user.
+ */
 const getUserProfile = async (req, res) => {
   try {
-    const userId = req.user.userId; // Get user ID from auth middleware
+    const userId = req.user.userId; 
 
     const { data: user, error } = await supabase
       .from("users")
@@ -14,7 +24,7 @@ const getUserProfile = async (req, res) => {
 
     res.status(200).json({ success: true, user });
   } catch (error) {
-    console.error("❌ Error fetching user profile:", error);
+    console.error("[ERROR] Error fetching user profile:", error);
     res.status(500).json({ success: false, message: "Failed to retrieve profile." });
   }
 };

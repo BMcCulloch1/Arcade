@@ -1,4 +1,3 @@
-// frontend/src/hooks/useClockOffset.js
 import { useState, useEffect } from "react";
 import axios from "axios";
 
@@ -13,7 +12,6 @@ const useClockOffset = () => {
         // Calculate the offset as serverTime - clientTime.
         const newOffset = serverTime - clientTime;
         setOffset(newOffset);
-        console.log("Clock offset (ms):", newOffset);
       })
       .catch((err) => {
         console.error("Error syncing time:", err);

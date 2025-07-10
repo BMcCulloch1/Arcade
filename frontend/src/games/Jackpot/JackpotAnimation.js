@@ -2,10 +2,15 @@ import React, { useEffect, useRef, useCallback, useMemo } from "react";
 
 const CARD_WIDTH = 80;
 const CONTAINER_WIDTH = 400;
-const TAPE_LENGTH = 100; // Fixed number of elements in the tape
+const TAPE_LENGTH = 100;
 
-const easeOut = (t) => 1 - Math.pow(1 - t, 5); // Stronger deceleration
+// Easing function for smooth deceleration
+const easeOut = (t) => 1 - Math.pow(1 - t, 5); 
 
+/**
+ * JackpotAnimation
+ * Handles rendering and animating the scrolling tape of player avatars.
+ */
 const JackpotAnimation = ({ 
   players, 
   winnerId, 
@@ -19,32 +24,35 @@ const JackpotAnimation = ({
   const animationFrameIdRef = useRef(null);
   const isAnimationRunningRef = useRef(false);
   const lastAnimationStartTime = useRef(null);
-  const hasRenderedTapeRef = useRef(false); // Track if tape has been rendered
+  const hasRenderedTapeRef = useRef(false); 
 
   // Stabilize values so they don’t change mid-animation.
   const stableAnimationStartTime = useMemo(() => animationStartTimeFromServer, [animationStartTimeFromServer]);
   const stableTargetOffset = useMemo(() => serverTargetOffset, [serverTargetOffset]);
 
+  /** 
+   * Call this when animation completes 
+   */
   const handleAnimationEnd = useCallback(() => {
-    console.log("✅ Animation completed, calling onAnimationEnd!");
     isAnimationRunningRef.current = false;
     setTimeout(() => {
       if (onAnimationEnd) onAnimationEnd();
     }, 500);
   }, [onAnimationEnd]);
 
-  // Render the tape of players once.
-  useEffect(() => {
+/**
+   * Renders the full tape of player avatars once.
+   */
+    useEffect(() => {
     if (!tapeRef.current || !players || players.length === 0) {
-      console.error("❌ Tape is missing or players are empty!");
+      console.error("[ERROR] Tape is missing or players are empty!");
       return;
     }
-    // Only render once.
     if (hasRenderedTapeRef.current) return;
     
-    console.log("🔍 Rendering tape for players:", players);
     tapeRef.current.innerHTML = ""; // Clear previous tape elements
 
+    // Repeat players to fill tape
     const tapePlayers = [];
     for (let i = 0; i < TAPE_LENGTH; i++) {
       // Cycle through players
@@ -52,6 +60,7 @@ const JackpotAnimation = ({
       tapePlayers.push(player);
     }
 
+    
     tapePlayers.forEach((player) => {
       const item = document.createElement("div");
       item.style.display = "inline-block";
@@ -68,7 +77,7 @@ const JackpotAnimation = ({
       item.style.minWidth = `${CARD_WIDTH}px`;
       item.innerText = player.avatar_initials || (player.email ? player.email[0].toUpperCase() : "?");
 
-      // Optional: Highlight the winning entry
+      // Highlight the winning entry
       if (String(player.user_id) === String(winnerId)) {
         item.style.border = "3px solid gold";
       }
@@ -76,47 +85,42 @@ const JackpotAnimation = ({
       tapeRef.current.appendChild(item);
     });
 
-    console.log("✅ Tape Elements Created!", tapeRef.current.children.length);
-    console.log("📏 Tape Container Width:", tapeRef.current.scrollWidth);
     hasRenderedTapeRef.current = true;
   }, [players]);
 
+  /**
+   * Runs the animation when startAnimation is true.
+   */
   useEffect(() => {
-  if (!startAnimation) return;
+    if (!startAnimation) return;
   
-  // Reset the tape render flag so the tape re-renders on each animation run.
-  hasRenderedTapeRef.current = false;
+    // Reset the tape render flag so the tape re-renders on each animation run.
+    hasRenderedTapeRef.current = false;
 
-  // Lock in the values.
-  const animationStart = stableAnimationStartTime;
-  const targetOffset = stableTargetOffset;
-  console.log("🚀 Starting Animation...");
-  isAnimationRunningRef.current = true;
-  console.log("🎯 Animation Start Time:", animationStart);
-  console.log("🎯 Target Offset:", targetOffset);
+    const animationStart = stableAnimationStartTime;
+    const targetOffset = stableTargetOffset;
+    isAnimationRunningRef.current = true;
 
-  const totalDuration = 8000; // total duration in ms (8 seconds)
+    const totalDuration = 8000; // total duration in ms (8 seconds)
 
-  const animate = () => {
-    const now = Date.now();
-    const elapsed = now - animationStart;
-    // Clamp elapsed time between 0 and totalDuration
-    const t = Math.min(elapsed / totalDuration, 1);
-    // Compute current offset using a single easing function
-    const currentOffset = targetOffset * easeOut(t);
+    const animate = () => {
+      const now = Date.now();
+      const elapsed = now - animationStart;
+      // Clamp elapsed time between 0 and totalDuration
+      const t = Math.min(elapsed / totalDuration, 1);
+      // Compute current offset using a single easing function
+      const currentOffset = targetOffset * easeOut(t);
 
-    if (tapeRef.current) {
-      tapeRef.current.style.transform = `translateX(-${currentOffset}px)`;
-     // console.log("🎥 Tape Moving:", currentOffset);
-    }
+      if (tapeRef.current) {
+        tapeRef.current.style.transform = `translateX(-${currentOffset}px)`;
+      }
 
-    if (t < 1) {
-      animationFrameIdRef.current = requestAnimationFrame(animate);
-    } else {
-      console.log("✅ Animation completed. Final Offset:", currentOffset);
-      handleAnimationEnd();
-      isAnimationRunningRef.current = false;
-    }
+      if (t < 1) {
+        animationFrameIdRef.current = requestAnimationFrame(animate);
+      } else {
+        handleAnimationEnd();
+        isAnimationRunningRef.current = false;
+      }
   };
 
   animationFrameIdRef.current = requestAnimationFrame(animate);
@@ -128,10 +132,9 @@ const JackpotAnimation = ({
   };
 }, [startAnimation, stableAnimationStartTime, stableTargetOffset]);
 
-  
-  
-  
-
+  /**
+   * Render UI
+   */
   return (
     <div
       ref={containerRef}

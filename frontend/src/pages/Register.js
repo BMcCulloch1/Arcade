@@ -5,9 +5,9 @@ function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState(""); // For error messages
-  const [successMessage, setSuccessMessage] = useState(""); // For success feedback
-  const [isLoading, setIsLoading] = useState(false); // For loading state
+  const [error, setError] = useState(""); 
+  const [successMessage, setSuccessMessage] = useState(""); 
+  const [isLoading, setIsLoading] = useState(false); 
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -15,7 +15,6 @@ function Register() {
     setError("");
     setSuccessMessage("");
 
-    // Basic validation
     if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
       setError("All fields are required.");
       return;
@@ -29,7 +28,6 @@ function Register() {
     setIsLoading(true);
 
     try {
-      // Send registration data to the backend
       const response = await fetch("http://localhost:5000/api/auth/register", {
         method: "POST",
         headers: {
@@ -49,7 +47,6 @@ function Register() {
       setPassword("");
       setConfirmPassword("");
 
-      // Redirect to login after a delay
       setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
       console.error("Error during registration:", err);

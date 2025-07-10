@@ -1,16 +1,22 @@
-// CountdownTimer.js
+/**
+ * CountdownTimer.js
+ *
+ * A simple countdown component.
+ * - Starts from given duration
+ * - Updates every second
+ * - Calls onComplete() when time runs out
+ */
 import React, { useEffect, useState } from "react";
 
 const CountdownTimer = ({ duration, onComplete }) => {
   const [timeLeft, setTimeLeft] = useState(duration);
 
   useEffect(() => {
-    // Set up a 1-second interval to count down.
     const intervalId = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(intervalId);
-          onComplete(); // Notify when countdown is complete.
+          onComplete(); 
           return 0;
         }
         return prev - 1;

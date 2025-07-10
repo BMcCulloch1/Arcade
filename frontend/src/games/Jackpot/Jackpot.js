@@ -1,8 +1,23 @@
+/**
+ * Jackpot.js
+ * React component for handling the jackpot game logic and UI.
+ *
+ * Major sections:
+ * - Imports & Setup
+ * - State Variables
+ * - Sync Refs with State
+ * - Game API Handlers
+ * - Socket Event Handlers
+ * - Animation & Winner Handling
+ * - Render
+ */
+
+
 import React, { useEffect, useState, useContext, useRef, useMemo, useCallback } from "react";
 import { SocketContext } from "../../context/SocketContext";
 import axios from "axios";
 import JackpotAnimation from "./JackpotAnimation";
-import useClockOffset from "../../hooks/useClockOffset"; // adjust the path as needed
+import useClockOffset from "../../hooks/useClockOffset"; 
 
 
 const API_URL = "http://localhost:5000/api/jackpot";
@@ -11,9 +26,6 @@ const Jackpot = () => {
 
   const socket = useContext(SocketContext);
   const joinEmittedRef = useRef(false);
-  
-  
-
   
   // State variables for game data
   const [activeGame, setActiveGame] = useState(null);
@@ -27,14 +39,7 @@ const Jackpot = () => {
   const [isFinishing, setIsFinishing] = useState(false);
   const [serverTargetOffset, setServerTargetOffset] = useState(null);
   const currentRoomRef = useRef(null);
-
-
-
-  
-  // New state: record when the animation actually starts.
   const [animationStartTime, setAnimationStartTime] = useState(null);
-
-  // Phase state: "playing", "animating", "winner"
   const [phase, setPhase] = useState("playing");
   const phaseRef = useRef(phase);
 
@@ -50,7 +55,6 @@ const Jackpot = () => {
   const clockOffset = useClockOffset();
 
 
-
   useEffect(() => {
     const savedAnimation = localStorage.getItem("jackpotAnimationState");
     if (savedAnimation) {
@@ -64,7 +68,6 @@ const Jackpot = () => {
         fetchPastGames();
         return;
       }
-      // Guard against a null game
       if (!parsed.game || !parsed.game.status) {
         console.warn("Saved animation state is invalid. Clearing it.");
         localStorage.removeItem("jackpotAnimationState");
@@ -80,7 +83,6 @@ const Jackpot = () => {
           .then(({ data }) => {
             const games = data.games;
             if (games && games.length > 0 && games[0].id === savedGame.id) {
-              console.log("Restoring saved animation state:", { game: savedGame, gameStartTime });
               setActiveGame(savedGame);
               setAnimationStartTime(gameStartTime);
               setPhase("animating");
@@ -93,7 +95,7 @@ const Jackpot = () => {
             }
           })
           .catch((error) => {
-            console.error("❌ Error verifying saved state:", error);
+            console.error("[ERROR] verifying saved state:", error);
             localStorage.removeItem("jackpotAnimationState");
             fetchActiveGame();
             fetchPastGames();
@@ -110,10 +112,7 @@ const Jackpot = () => {
     }
   }, []);
   
-  
-  
-  
-  
+  // --- Sync Refs with State ---  
   useEffect(() => { phaseRef.current = phase; }, [phase]);
   useEffect(() => { activeGameRef.current = activeGame; }, [activeGame]);
   useEffect(() => { playersRef.current = players; }, [players]);
@@ -130,7 +129,6 @@ const Jackpot = () => {
       if (games && games.length > 0) {
         const currentGame = games[0];
         if (currentGame.status === "finished" && currentGame.animation_start_time) {
-          console.log("Restoring animation using DB animation start time.");
           setActiveGame(currentGame);
           setAnimationStartTime(new Date(currentGame.animation_start_time).getTime());
           setPhase("animating");
@@ -139,25 +137,22 @@ const Jackpot = () => {
           setActiveGame(currentGame);
         }
       } else if (!isCreatingGameRef.current) {
-        console.log("No active games found. Creating a new game...");
         isCreatingGameRef.current = true;
         await createNewGame();
         isCreatingGameRef.current = false;
       }
     } catch (error) {
-      console.error("❌ Error fetching active game:", error);
+      console.error("[ERROR] fetching active game:", error);
       isCreatingGameRef.current = false;
     }
   };
   
-  
-
   // --- Fetch Past Games ---
   const fetchPastGames = async () => {
     try {
       const token = localStorage.getItem("authToken");
       if (!token) {
-        console.error("❌ No auth token found.");
+        console.error("[ERROR] No auth token found.");
         return;
       }
       const { data } = await axios.get(`${API_URL}/history`, {
@@ -167,13 +162,12 @@ const Jackpot = () => {
         setPastGames(data.games);
       }
     } catch (error) {
-      console.error("❌ Error fetching past games:", error);
+      console.error("[ERROR] fetching past games:", error);
     }
   };
 
   // --- Create New Game ---
   const createNewGame = async () => {
-    // Clear any stale saved state
     localStorage.removeItem("jackpotAnimationState");
     try {
       finishedRef.current = false;
@@ -184,7 +178,6 @@ const Jackpot = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       const game = data.game;
-      // Reset state for new game
       setActiveGame(game);
       setPlayers([]);
       setTotalPot(0);
@@ -193,11 +186,9 @@ const Jackpot = () => {
       setAnimationStartTime(null);
       setPhase("playing");
     } catch (error) {
-      console.error("❌ Error creating new game:", error);
+      console.error("[ERROR] creating new game:", error);
     }
   };
-  
-  
 
   // --- Validate Bet ---
   const isValidBet = () => {
@@ -222,7 +213,6 @@ const Jackpot = () => {
             setActiveGame(data.updated_game);
             socket.emit("joinGameRoom", { gameId: activeGame.id });
 
-            // Fetch the latest timeLeft for the game
             const { data: latestGame } = await axios.get(`${API_URL}/open`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -234,14 +224,11 @@ const Jackpot = () => {
 
         setBetAmount("");
     } catch (error) {
-        console.error("❌ Error joining game:", error.response ? error.response.data : error);
+        console.error("[ERROR] joining game:", error.response ? error.response.data : error);
     } finally {
         setIsJoining(false);
     }
 };
-
-
-
 
   // --- Fetch Players ---
   const fetchPlayers = async (gameId) => {
@@ -253,11 +240,11 @@ const Jackpot = () => {
       setPlayers(data.players);
       setTotalPot(data.total_pot);
     } catch (error) {
-      console.error("❌ Error fetching players:", error);
+      console.error("[ERROR] fetching players:", error);
     }
   };
 
-  // Memoize players list
+// --- Memoize Players List ---
   const playersList = useMemo(() => {
     return players.map((player) => (
       <li key={player.user_id} className="flex items-center space-x-3">
@@ -276,10 +263,8 @@ const Jackpot = () => {
 
   // Animation end handler
   const handleAnimationEnd = useCallback(() => {
-    console.log("🎉 Animation complete!");
     setPhase("winner");
     setTimeout(() => {
-      console.log("🔄 Resetting game...");
       fetchPastGames();
       // Clear the saved animation state
       localStorage.removeItem("jackpotAnimationState");
@@ -295,17 +280,13 @@ const Jackpot = () => {
     }, 3000);
   }, [createNewGame, fetchPastGames]);
   
-  
-  
-  
-
-  // Memoize the animation component, passing the global (animation) start time.
+// --- Memoize Animation Component ---
   const animationComponent = useMemo(() => {
     if (phase === "animating" && winner) {
       return (
         <JackpotAnimation
           players={players}
-          winnerId={winner?.user_id || winner} // Ensure it's always an ID
+          winnerId={winner?.user_id || winner} 
           startAnimation={true}
           onAnimationEnd={handleAnimationEnd}
           animationStartTimeFromServer={animationStartTime}
@@ -315,8 +296,6 @@ const Jackpot = () => {
     }
     return null;
   }, [phase, winner, players, handleAnimationEnd, animationStartTime, serverTargetOffset]);
-
-
 
   // --- Finish Game ---
   const finishGame = async (winnerValue, gameIdParam) => {
@@ -328,7 +307,7 @@ const Jackpot = () => {
         (activeGameRef.current && activeGameRef.current.id) ||
         gameIdParam;
       if (!gameId) {
-        console.error("No active game ID available in finishGame.");
+        console.error("[ERROR] No active game ID available in finishGame.");
         setIsFinishing(false);
         return;
       }
@@ -356,7 +335,7 @@ const Jackpot = () => {
         }
   
         if (!latestGame) {
-          console.error("❌ Failed to retrieve updated game data after retries.");
+          console.error("[ERROR] Failed to retrieve updated game data after retries.");
           setIsFinishing(false);
           return;
         }
@@ -364,13 +343,12 @@ const Jackpot = () => {
         finalWinner = latestGame.result;
   
         if (!finalWinner) {
-          console.error("❌ No winner available (finalWinner is null).");
+          console.error("[ERROR] No winner available (finalWinner is null).");
           setIsFinishing(false);
           return;
         }
       }
   
-      console.log("Setting winner:", finalWinner);
   
       // Ensure latestGame has winner details before setting state
       if (latestGame && latestGame.winner) {
@@ -380,7 +358,7 @@ const Jackpot = () => {
           avatarInitials: latestGame.avatar_initials || latestGame.winner[0]?.toUpperCase(),
         });
       } else {
-        console.error("⚠️ Missing winner details in latestGame.");
+        console.error("[WARNING] Missing winner details in latestGame.");
         setWinner({ email: "Unknown", avatarColor: "#ccc", avatarInitials: "?" });
       }
   
@@ -390,13 +368,7 @@ const Jackpot = () => {
   
       const animStartTime = Date.now();
       setAnimationStartTime(animStartTime);
-  
-      // Call the endpoint to update the official animation start time
-      // await axios.post(
-      //   `${API_URL}/updateAnimationTime`,
-      //   { gameId, animationStartTime: animStartTime },
-      //   { headers: { Authorization: `Bearer ${token}` } }
-      // );
+
   
       // Save state locally as a fallback
       const finishedGame = { ...activeGame, status: "finished" };
@@ -406,24 +378,16 @@ const Jackpot = () => {
       );
   
       setPhase("animating");
-      console.log("Phase set to animating");
     } catch (error) {
-      console.error("❌ Error finishing game:", error);
+      console.error("[ERROR] finishing game:", error);
     }
     setIsFinishing(false);
   };
   
-  
-  
-  
-  
-  
-  
+  // --- Handle Game Started Events from Server ---
   useEffect(() => {
     const handleGameStarted = (data) => {
-      console.log("🎮 Game started event received:", data);
       setActiveGame(data.game);
-      // Optionally, update timeLeft if needed:
       if (data.game.started_at && data.game.time_limit) {
         const startTime = new Date(data.game.started_at).getTime();
         const gameDuration = data.game.time_limit * 1000;
@@ -440,21 +404,19 @@ const Jackpot = () => {
     };
   }, [socket]);
   
-  
-  
-
+  // --- Load Players When Active Game Changes ---
   useEffect(() => {
     if (activeGame && activeGame.id) {
       fetchPlayers(activeGame.id);
     }
   }, [activeGame]);
 
+  // --- Handle Timer Updates from Server ---
   useEffect(() => {
     const handleTimerUpdate = (data) => {
       setTimeLeft(data.timeLeft);
   
       if (data.timeLeft === 0 && phaseRef.current === "playing") {
-        console.log("⏳ Game time expired!");
       }
     };
   
@@ -464,9 +426,9 @@ const Jackpot = () => {
     };
   }, [socket]);
   
-  
+  // --- Keep activeGameRef Up To Date ---
   useEffect(() => {
-    activeGameRef.current = activeGame; // Always update ref when activeGame changes
+    activeGameRef.current = activeGame; 
   }, [activeGame]);
 
 
@@ -474,7 +436,6 @@ const Jackpot = () => {
 useEffect(() => {
   const joinRoom = () => {
     if (activeGameRef.current && activeGameRef.current.id) {
-      console.log("Emitting joinGameRoom for game:", activeGameRef.current.id);
       socket.emit("joinGameRoom", { gameId: activeGameRef.current.id });
       currentRoomRef.current = activeGameRef.current.id;
     }
@@ -485,7 +446,6 @@ useEffect(() => {
   }
 
   socket.on("connect", () => {
-    console.log("Socket connected, rejoining room:", activeGameRef.current?.id);
     if (activeGameRef.current) joinRoom();
   });
 
@@ -495,12 +455,9 @@ useEffect(() => {
 }, [socket, activeGame]);
   
 
-
-
-// Socket Listeners Effect
+// --- Handle Player Joined Events from Server ---
 useEffect(() => {
   const handlePlayerJoined = (data) => {
-    console.log("🔄 Player joined update received:", data);
     if (activeGameRef.current && data.gameId === activeGameRef.current.id) {
       setPlayers((prevPlayers) => {
         const updatedPlayers = [...prevPlayers];
@@ -509,7 +466,6 @@ useEffect(() => {
             updatedPlayers.push(newPlayer);
           }
         });
-        console.log("✅ Updated Players List:", updatedPlayers);
         return updatedPlayers;
       });
       setTotalPot(data.totalPot);
@@ -525,26 +481,21 @@ useEffect(() => {
   };
 }, [socket]);
 
-  
 
-
-// In your Jackpot.js (or wherever you handle the "animationStarted" event)
+// --- Handle Animation Started Events from Server ---
 useEffect(() => {
   const handleAnimationStarted = (data) => {
     if (activeGame && data.gameId === activeGame.id) {
       if (phaseRef.current === "animating") {
-        console.warn("⚠️ Ignoring duplicate animationStarted event.");
+        console.warn("[WARNING]  Ignoring duplicate animationStarted event.");
         return;
       }
 
-      // Convert the server timestamp to a number.
       const serverTimestamp = new Date(data.animationStartTime).getTime();
       // Adjust the timestamp by subtracting the clock offset.
       const adjustedTimestamp = serverTimestamp - clockOffset;
-      console.log(`Setting Animation Start Time (adjusted): ${adjustedTimestamp}`);
-      console.log(`Setting Server Target Offset: ${data.targetOffset || "MISSING"}`);
+      
 
-      // Look for the winner in the players list (if available)
       const winnerDetails =
         players.find(
           (p) => String(p.user_id) === String(data.winnerId)
@@ -565,16 +516,13 @@ useEffect(() => {
 }, [socket, activeGame, clockOffset, players]);
 
 
-
-
-
-
   // --- Initial Fetches ---
   useEffect(() => {
     fetchActiveGame();
     fetchPastGames();
   }, []);
 
+  // --- Render UI ---
   return (
     <div
       className="max-w-4xl mx-auto p-6 rounded-lg shadow-xl text-white"
@@ -616,7 +564,7 @@ useEffect(() => {
             {/* Timer */}
             {activeGame?.status === "in_progress" && (
               <p className="text-2xl font-extrabold text-red-500 neon-glow">
-                ⏳ Time Left: {timeLeft}s
+                [TIMER] Time Left: {timeLeft}s
               </p>
             )}
   
@@ -652,7 +600,7 @@ useEffect(() => {
           </div>
         </div>
   
-       {/* Right Section: Animation / Winner Display */}
+       {/* Right Container: Animation / Winner Display */}
         <div className="md:w-1/2 flex justify-center items-center">
           {phase === "animating" && winner ? (
             animationComponent
@@ -667,12 +615,12 @@ useEffect(() => {
                     {winner.avatarInitials || (winner.email ? winner.email[0].toUpperCase() : "?")}
                   </div>
                   <p className="text-lg font-bold text-neon-green">
-                    🎉 Winner: {winner.email}
+                    Winner: {winner.email}
                   </p>
                 </>
               ) : (
                 <p className="text-lg font-bold text-neon-green">
-                  🎉 Winner: {winner || "Unknown"} 🎉
+                  Winner: {winner || "Unknown"}
                 </p>
               )}
             </div>
@@ -696,7 +644,7 @@ useEffect(() => {
               <li key={index} className="p-4 bg-gray-800 rounded-lg border border-gray-700">
                 <p className="text-neon-blue">Game ID: {game.id}</p>
                 <p className="text-neon-green">💰 Total Pot: ${game.total_pot}</p>
-                <p className="text-neon-yellow">🏆 Winner: {game.winner}</p>
+                <p className="text-neon-yellow"> Winner: {game.winner}</p>
                 <p className="text-yellow-400">Winner's Share: {game.winner_percentage}%</p>
               </li>
             ))}

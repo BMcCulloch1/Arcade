@@ -1,17 +1,17 @@
 import { io } from "socket.io-client";
 
-// ✅ Use a single socket instance
+// Use a single socket instance
 const socket = io("http://localhost:5000", {
-  transports: ["websocket"], // Use WebSocket only
-  reconnection: true, // Allow reconnecting
-  reconnectionAttempts: 5, // Try 5 times before failing
-  reconnectionDelay: 1000, // Delay before retrying
-  autoConnect: true, // ✅ Automatically connect when the socket is created
+  transports: ["websocket"], 
+  reconnection: true, 
+  reconnectionAttempts: 5, 
+  reconnectionDelay: 1000, 
+  autoConnect: true, 
 });
 
 // Debug logs for socket connection
 socket.on("connect", () => {
-  console.log("🟢 Socket connected:", socket.connected);
+  console.log("[CONNECTED]  Socket connected:", socket.connected);
 });
 
 socket.on("connect_error", (error) => {

@@ -1,5 +1,5 @@
 const express = require("express");
-const verifyToken = require("../middleware/verifyToken"); // Middleware to authenticate user
+const verifyToken = require("../middleware/verifyToken"); 
 const { createGame, getOpenGames, joinGame, getGameHistory, getGameDetails, getAllGames } = require("../controllers/gameController"); // Controller to handle game logic
 
 const router = express.Router();

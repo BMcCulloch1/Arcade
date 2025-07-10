@@ -1,4 +1,18 @@
-// CoinToss.js
+/**
+ * CoinToss.js
+ * React component for handling the Coin Clash/Toss game page logic and UI.
+ *
+ * Major sections:
+ * - Imports & Setup
+ * - State Variables
+ * - Derived State & Refs
+ * - Data Fetching & Polling
+ * - Categorization & Stats
+ * - Socket Event Handlers
+ * - Game Action Handlers
+ * - Render
+ */
+
 import React, { useContext, useEffect, useState, useRef, useCallback } from "react";
 import { GamesContext } from "../../context/GamesContext";
 import { SocketContext } from "../../context/SocketContext";
@@ -6,7 +20,7 @@ import WatchGameModal from "./WatchGameModal";
 import CreateGameModal from "./CreateGameModal";
 import debounce from "lodash.debounce";
 
-// Create a HeroSection component
+// --- Hero Section Component ---
 function HeroSection() {
   return (
     <section className="bg-gradient-to-r from-blue-900 to-black p-8 rounded-lg mb-8 text-center"
@@ -14,19 +28,19 @@ function HeroSection() {
         boxShadow: "0 0 20px rgba(0, 150, 255, 0.6)",
       }}
     >
-      {/* The main title with neon styling */}
       <h1 className="text-5xl font-extrabold text-white neon-text1">Coin Clash</h1>
-      {/* A short tagline that sets the game’s mood */}
       <p className="mt-4 text-xl text-neon-blue">
       Flip. Clash. Dominate!      </p>
     </section>
   );
 }
 
-
+// --- Main CoinToss Component ---
 function CoinToss() {
   const { games, fetchGames, setGames } = useContext(GamesContext);
-  const socket = useContext(SocketContext); // This gets your socket instance
+  const socket = useContext(SocketContext); 
+
+  // --- State Variables ---
   const [error, setError] = useState("");
   const [isJoining, setIsJoining] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -37,27 +51,24 @@ function CoinToss() {
   const [losses, setLosses] = useState(0);
   const [openGames, setOpenGames] = useState(0);
   const [totalGamesToday, setTotalGamesToday] = useState(0);
-  const [isModalOpen, setIsModalOpen] = useState(false); // Controls modal visibility
+  const [isModalOpen, setIsModalOpen] = useState(false); 
   const [joiningGames, setJoiningGames] = useState(new Set());
-
-  // New State for Categorized Games
   const [activeGames, setActiveGames] = useState([]);
   const [completedGames, setCompletedGames] = useState([]);
 
-  // Ref for polling interval (when watching a game)
+  // --- Refs ---
   const pollIntervalRef = useRef(null);
 
   
 
-  // Create a debounced version of fetchGames so that rapid calls don’t clear state.
+  // --- Debounced FetchGames ---
   const debouncedFetchGames = useCallback(debounce(() => {
     fetchGames();
   }, 500), [fetchGames]);
 
-  // Initial fetch and userId extraction.
+  // --- Initial Fetch and User ID Setup ---
   useEffect(() => {
     if (fetchGames) {
-      // Use the debounced version.
       debouncedFetchGames();
     }
     const token = localStorage.getItem("authToken");
@@ -71,14 +82,13 @@ function CoinToss() {
     }
   }, [fetchGames, debouncedFetchGames]);
 
-  // Poll for a finished game if a game is being watched and its result isn’t set yet.
+  // --- Polling for Watched Game Updates ---
   useEffect(() => {
     if (watchingGame && !watchingGame.result) {
       pollIntervalRef.current = setInterval(async () => {
         await debouncedFetchGames();
         const updatedGame = games.find((g) => g.id === watchingGame.id);
         if (updatedGame?.result) {
-          console.log("✅ Game result found! Stopping polling...");
           setWatchingGame(updatedGame);
           clearInterval(pollIntervalRef.current);
         }
@@ -89,7 +99,7 @@ function CoinToss() {
     };
   }, [watchingGame, games, debouncedFetchGames]);
 
-  // Background Process Effect (remains as before)
+  // --- Background Process Effect ---
   useEffect(() => {
     games.forEach((game) => {
       if (game.status !== "open") {
@@ -109,6 +119,7 @@ function CoinToss() {
     });
   }, [games]);
 
+  // --- Stats Calculation (Wins/Losses) ---
   useEffect(() => {
     if (!currentUserId) return;
   
@@ -128,6 +139,7 @@ function CoinToss() {
     setLosses(lossCount);
   }, [games, currentUserId]);
 
+  // --- Open Games & Today's Games Count ---
   useEffect(() => {
     if (!games || games.length === 0) {
       setOpenGames(0);
@@ -158,41 +170,18 @@ function CoinToss() {
   }, [games]);
   
 
-// // Helper function to format timestamp to a valid ISO string
-// const formatTimestamp = (timestamp) => {
-//   if (!timestamp) {
-//     console.error("Invalid timestamp received:", timestamp);
-//     return null; // Prevents crashing if timestamp is missing
-//   }
-
-//   try {
-//     const date = new Date(timestamp);
-//     if (isNaN(date.getTime())) {
-//       throw new Error("Invalid date format");
-//     }
-    
-//     return date.toISOString().replace(/(\.\d{3})\d+/, "$1"); // Trims extra decimal places
-//   } catch (error) {
-//     console.error("Error formatting timestamp:", timestamp, error);
-//     return null; // Prevents breaking the UI
-//   }
-// };
-
-
-
-// Categorize games into Active and Completed.
+// --- Categorize Active & Completed Games ---
 useEffect(() => {
   if (!games || games.length === 0) return;
   
   const newActiveGames = [];
   const newCompletedGames = [];
   const now = Date.now();
-  const delay = 15000; // 10 seconds delay
+  const delay = 15000; 
 
   games.forEach((game) => {
     if (game.status === "finished" && game.finished_at) {
       const finishedTime = new Date(game.finished_at).getTime();
-      // If finished less than delay ago, treat as active
       if (now - finishedTime < delay) {
         newActiveGames.push(game);
       } else {
@@ -207,7 +196,7 @@ useEffect(() => {
   setCompletedGames(newCompletedGames);
 }, [games]);
 
-
+// --- Body Scroll Lock on Modal Open ---
   useEffect(() => {
     if (isModalOpen) {
       document.body.style.overflow = "hidden";
@@ -216,14 +205,13 @@ useEffect(() => {
     }
   }, [isModalOpen]);
 
+  // --- Handle Socket Updates ---
   useEffect(() => {
     socket.on("gameUpdated", (updatedGame) => {
-      console.log("🟢 Global gameUpdated event received:", updatedGame);
   
       // Only skip if the game is finished and the result is missing
       if (updatedGame.status === "finished" && !updatedGame.result) {
-        console.warn(`⚠️ Skipping finished game ${updatedGame.id}: Missing result`);
-        console.log("🚨 Full game object received:", updatedGame);
+        console.warn(`[WARNING]  Skipping finished game ${updatedGame.id}: Missing result`);
         return;
       }
   
@@ -236,7 +224,7 @@ useEffect(() => {
               }
             : g
         );
-        // Also update the watchingGame if it's the same game
+        // Update the watchingGame if it's the same game
         if (watchingGame && watchingGame.id === updatedGame.id) {
           setWatchingGame(updatedGame);
         }
@@ -249,14 +237,7 @@ useEffect(() => {
     };
   }, [socket, setGames, watchingGame]);
   
-
-
-  
-  
-  
-  
-
-  // Function to create a new game.
+  // --- Handle Create Game ---
   const handleCreateGame = async (wagerAmount, coinChoice) => {
     setIsCreating(true);
     try {
@@ -285,15 +266,12 @@ useEffect(() => {
   };
   
 
-  // Function to join a game.
+  // --- Handle Join Game ---
   const handleJoinGame = async (gameId) => {
-    console.log(`Joining game ${gameId}...`); // Log start of join process
     setIsJoining(gameId);
-    setJoiningGames((prev) => new Set(prev).add(gameId)); // Lock the game
+    setJoiningGames((prev) => new Set(prev).add(gameId)); 
   
     try {
-      // Optimistically update the local activeGames state
-      console.log(`Optimistically updating game ${gameId} to in_progress...`); // Log optimistic update
       setActiveGames((prevActiveGames) =>
         prevActiveGames.map((g) =>
           g.id === gameId
@@ -313,12 +291,10 @@ useEffect(() => {
   
       const data = await response.json();
       if (data.success) {
-        console.log(`Game ${gameId} joined successfully. Fetching updated games...`); // Log successful join
-        await fetchGames(); // Fetch the updated list of games immediately
+        await fetchGames(); 
       } else {
-        console.error(`Failed to join game ${gameId}: ${data.message}`); // Log join failure
+        console.error(`Failed to join game ${gameId}: ${data.message}`); 
         setError(data.message);
-        // Revert the optimistic update if the join fails
         setActiveGames((prevActiveGames) =>
           prevActiveGames.map((g) =>
             g.id === gameId
@@ -328,9 +304,8 @@ useEffect(() => {
         );
       }
     } catch (err) {
-      console.error(`Error joining game ${gameId}:`, err); // Log error
+      console.error(`Error joining game ${gameId}:`, err);
       setError("An error occurred while joining the game.");
-      // Revert the optimistic update if an error occurs
       setActiveGames((prevActiveGames) =>
         prevActiveGames.map((g) =>
           g.id === gameId
@@ -339,7 +314,6 @@ useEffect(() => {
         )
       );
     } finally {
-      console.log(`Join process for game ${gameId} completed. Unlocking game...`); // Log completion
       setIsJoining(null);
       setJoiningGames((prev) => {
         const newSet = new Set(prev);
@@ -349,6 +323,7 @@ useEffect(() => {
     }
   };
 
+  // --- Frontend Status ---
   const getFrontendStatus = (game) => {
     if (game.status === "open") {
       return "Open game";
@@ -362,17 +337,7 @@ useEffect(() => {
     return game.status;
   };
   
-  // useEffect(() => {
-  //   console.log("Games data:", games);
-  // }, [games]);
-  
-
-  // Helper function to determine coin flip result.
-  const getCoinFlipResult = (game, currentUserId) => {
-    if (!game?.result) return null;
-    return game.result === currentUserId ? "heads" : "tails";
-  };
-
+  // --- WatchGame Sync on Update ---
   useEffect(() => {
     if (watchingGame) {
       const latest = games.find((g) => g.id === watchingGame.id);
@@ -382,9 +347,7 @@ useEffect(() => {
     }
   }, [games, watchingGame]);
   
-  
-
-
+  // --- Render UI ---
   return (
     <div
       className="max-w-5xl mx-auto p-6"
@@ -595,7 +558,7 @@ useEffect(() => {
                         </div>
                       </div>
                     ) : (
-                      <p className="text-neon-yellow">🏆 Winner: {game.result}</p>
+                      <p className="text-neon-yellow">[WINNER]  Winner: {game.result}</p>
                     )}
                     <p>Total Pot: <span className="text-yellow-400">${totalPot}</span></p>
                   </li>

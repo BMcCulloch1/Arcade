@@ -7,7 +7,7 @@ export const fetchWithAuth = async (url, options = {}) => {
 
   const headers = {
     ...options.headers,
-    Authorization: `Bearer ${token}`, // Ensure the token is prefixed with "Bearer"
+    Authorization: `Bearer ${token}`, 
   };
 
   const response = await fetch(url, { ...options, headers });

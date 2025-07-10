@@ -5,9 +5,7 @@ function Navigation() {
   return (
     <nav
       className="bg-gradient-to-r from-blue-900 to-black p-4 shadow-lg"
-      // style={{
-      //   boxShadow: "0 0 20px rgba(0, 150, 255, 0.6)", // Neon glow effect
-      // }}
+      
     >
       <div className="flex justify-between items-center max-w-6xl mx-auto">
         {/* Logo / Title */}
@@ -77,7 +75,7 @@ function Navigation() {
           </NavLink>
           <NavLink
             to="/"
-            onClick={() => localStorage.removeItem("authToken")} // Handle logout
+            onClick={() => localStorage.removeItem("authToken")} 
             className="text-white hover:text-neon-red transition duration-300"
           >
             Logout

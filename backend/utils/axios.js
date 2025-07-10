@@ -6,7 +6,6 @@ const instance = axios.create({
   baseURL: API_URL,
 });
 
-// Attach token to every request if available
 instance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("authToken");
@@ -18,14 +17,13 @@ instance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Interceptor to handle 401 errors
 instance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      console.error("⚠️ JWT expired or unauthorized. Logging out...");
+      console.error("[WARNING]  JWT expired or unauthorized. Logging out...");
       localStorage.removeItem("authToken");
-      window.location.href = "/login"; // Redirect to login
+      window.location.href = "/login"; 
     }
     return Promise.reject(error);
   }

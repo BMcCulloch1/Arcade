@@ -1,6 +1,6 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
-import { jwtDecode } from "jwt-decode"; // ✅ Use named import
+import { jwtDecode } from "jwt-decode"; 
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("authToken");
@@ -11,7 +11,7 @@ const ProtectedRoute = ({ children }) => {
   }
 
   try {
-    const decoded = jwtDecode(token); // ✅ Corrected function name
+    const decoded = jwtDecode(token); 
     if (decoded.exp * 1000 < Date.now()) {
       console.warn("Token expired, redirecting to login...");
       localStorage.removeItem("authToken");

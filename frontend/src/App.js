@@ -1,4 +1,15 @@
-// src/App.js
+/**
+ * App.js
+ * 
+ * Main React application component defining all routes and layout.
+ *
+ * Features:
+ * - Provides global Socket and Games contexts.
+ * - Defines all app routes using React Router.
+ * - Handles protected routes via <ProtectedRoute>.
+ * - Conditionally renders Navigation except on login/register.
+ */
+
 import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";

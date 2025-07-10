@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
-const API_URL = "http://localhost:5000/api/auth/profile"; // Adjust endpoint if needed
+const API_URL = "http://localhost:5000/api/auth/profile"; 
 
 const Profile = () => {
   const [user, setUser] = useState(null);
@@ -11,7 +11,7 @@ const Profile = () => {
       try {
         const token = localStorage.getItem("authToken");
         if (!token) {
-          console.error("❌ No auth token found.");
+          console.error("[ERROR] No auth token found.");
           return;
         }
 
@@ -22,10 +22,10 @@ const Profile = () => {
         if (data.success) {
           setUser(data.user);
         } else {
-          console.error("❌ Failed to fetch user profile:", data.message);
+          console.error("[ERROR] Failed to fetch user profile:", data.message);
         }
       } catch (error) {
-        console.error("❌ Error fetching user profile:", error);
+        console.error("[ERROR] fetching user profile:", error);
       }
     };
 

@@ -1,9 +1,13 @@
+/**
+ * WatchGameModal.js
+ *
+ * Modal to watch a coin toss game with countdown and animation phases.
+ */
+
 import React, { useEffect, useState, useCallback } from "react";
-import CountdownTimer from "./CountdownTimer"; // optional separate countdown component
 import CoinFlipAnimation from "./CoinFlipAnimation";
 
 const WatchGameModal = ({ game, onClose, onAnimationComplete }) => {
-  // Define the full coin toss duration (in ms)
   const COIN_TOSS_DURATION = 8000;
 
   // phase: "countdown", "animation", or "result"
@@ -128,7 +132,7 @@ const WatchGameModal = ({ game, onClose, onAnimationComplete }) => {
         </div>
         {phase === "result" && (
           <p className="mt-6 text-xl font-bold text-green-500 text-center">
-            🏆 Winner: {winnerEmail || "Unknown"}
+            [WINNER]  Winner: {winnerEmail || "Unknown"}
           </p>
         )}
         <button

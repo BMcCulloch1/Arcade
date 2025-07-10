@@ -1,12 +1,29 @@
+/**
+ * GamesContext Provider
+ * ---------------------
+ * Provides global access to game data and real-time updates
+ * for the entire React app.
+ */
+
 import React, { createContext, useState, useEffect } from "react";
 import supabase from "../utils/supabaseClient";
 
 export const GamesContext = createContext(null);
 
+/**
+ * GamesProvider
+ * Wraps children components and supplies:
+ *  - games list
+ *  - setGames
+ *  - fetchGames function
+ */
+
 export const GamesProvider = ({ children }) => {
   const [games, setGames] = useState([]);
 
-  // Fetch games from API
+ /**
+   * Fetches all games from the backend API.
+   */  
   const fetchGames = async () => {
     try {
       const response = await fetch("http://localhost:5000/api/games/all", {
@@ -35,9 +52,11 @@ export const GamesProvider = ({ children }) => {
   };
   
 
-  // Listen for real-time updates
+/**
+   * Sets up real-time updates from Supabase on mount.
+   */
   useEffect(() => {
-    fetchGames(); // Initial fetch on mount
+    fetchGames(); 
   
     const channel = supabase
       .channel("games")
@@ -45,16 +64,13 @@ export const GamesProvider = ({ children }) => {
         "postgres_changes",
         { event: "*", schema: "public", table: "games" },
         (payload) => {
-          console.log("🔄 Real-time update received:", payload);
   
-          // Check if `created_at` is missing in real-time updates
           if (!payload.new.created_at) {
-            console.warn(`⚠️ Game ${payload.new.id} missing created_at in real-time update!`);
+            console.warn(`[WARNING]  Game ${payload.new.id} missing created_at in real-time update!`);
           } else {
-            console.log(`✅ Game ${payload.new.id} has valid created_at: ${payload.new.created_at}`);
           }
   
-          fetchGames(); // Refresh game list
+          fetchGames(); 
         }
       )
       .subscribe();

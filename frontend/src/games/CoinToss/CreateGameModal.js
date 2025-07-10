@@ -1,8 +1,14 @@
+/**
+ * CreateGameModal.js
+ * 
+ * Modal component for creating a new Coin Toss game.
+ */
+
 import React, { useState, useEffect } from "react";
 
 const CreateGameModal = ({ isOpen, onClose, onCreateGame }) => {
   const [wagerAmount, setWagerAmount] = useState("");
-  const [coinChoice, setCoinChoice] = useState("Heads"); // default to Heads
+  const [coinChoice, setCoinChoice] = useState("Heads"); 
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "auto";

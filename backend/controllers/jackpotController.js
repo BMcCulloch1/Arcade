@@ -1,25 +1,34 @@
-const { response } = require("express");
+/**
+ * Jackpot Game Controller
+ * -----------------------
+ * Handles creation, joining, timing, winner selection, and animation updates
+ * for the jackpot game.
+ */
+
 const supabase = require("../utils/supabaseClient");
 const crypto = require("crypto");
 const { getIo } = require("../socket");
 
 
-
 const CARD_WIDTH = 80;
 const CONTAINER_WIDTH = 400;
-const TAPE_LENGTH = 100; // Fixed number of elements in the tape
+const TAPE_LENGTH = 100; 
 
-// Initialize a global flag to track animation updates
+// Global flag to track animation updates
 globalThis.hasUpdatedAnimationTime = {};
 
 
+/**
+ * Calculates the target offset for the jackpot animation.
+ * This ensures the winning player's avatar lands in the center.
+ */
 const computeTargetOffset = (players, winnerEmail) => {
     if (!players || players.length === 0) {
-        console.error("❌ computeTargetOffset: No players available.");
+        console.error("[ERROR] No players available for target offset.");
         return null;
     }
 
-    console.log("📊 Computing target offset for:", winnerEmail);
+    console.log(`[DEBUG] Computing offset for winner: ${winnerEmail}`);
 
     const totalWager = players.reduce((acc, player) => acc + Number(player.wager_amount), 0);
     let weightedProfiles = [];
@@ -46,7 +55,7 @@ const computeTargetOffset = (players, winnerEmail) => {
     }, []);
 
     if (winnerIndices.length === 0) {
-        console.error("❌ No winner indices found for:", winnerEmail);
+        console.error("[ERROR] No winner indices found for:", winnerEmail);
         return null;
     }
 
@@ -57,7 +66,7 @@ const computeTargetOffset = (players, winnerEmail) => {
     const scalingFactor = tape.length / TAPE_LENGTH;
     const scaledTargetOffset = targetOffset / scalingFactor;
 
-    console.log(`🎯 Computed Target Offset: ${scaledTargetOffset}`);
+    console.log(`[DEBUG] Computed target offset: ${scaledTargetOffset}`);
     return scaledTargetOffset;
 };
 
@@ -72,7 +81,6 @@ const createJackpotGame = async (req, res) => {
     }
   
     try {
-      // Use a transaction to ensure atomicity
       const { data: existingGames, error: fetchError } = await supabase
         .from("jackpot_games")
         .select("*")
@@ -110,7 +118,7 @@ const createJackpotGame = async (req, res) => {
         game: newGame,
       });
     } catch (error) {
-      console.error("❌ Error creating jackpot game:", error);
+      console.error("[ERROR] Failed to create jackpot game:", error);
       res.status(500).json({
         success: false,
         message: "Failed to create jackpot game. Please try again later.",
@@ -137,7 +145,7 @@ const createJackpotGame = async (req, res) => {
         games: activeGames,
       });
     } catch (error) {
-      console.error("Error retrieving active games", error);
+      console.error("[ERROR] Failed to fetch active jackpot games:", error);
       res.status(500).json({
         success: false,
         message: "Failed to retrieve active games. Please try again.",
@@ -148,6 +156,10 @@ const createJackpotGame = async (req, res) => {
 
 const activeTimers = new Map(); // Store active timers
 
+/**
+ * Starts a countdown timer for a jackpot game.
+ * Emits 'timerUpdate' events to clients every second.
+ */
 const startTimer = async (gameId, io) => {
     if (activeTimers.has(gameId)) return; // Prevent multiple timers
 
@@ -163,7 +175,7 @@ const startTimer = async (gameId, io) => {
         const gameDuration = game.time_limit * 1000;
         const gameEndTime = new Date(game.started_at).getTime() + gameDuration;
 
-        console.log(`⏱️ Timer started for game: ${gameId}`);
+        console.log(`[INFO] Timer started for game ${gameId}`);
 
         const timerInterval = setInterval(() => {
             const timeLeft = Math.max(Math.floor((gameEndTime - Date.now()) / 1000), 0);
@@ -172,14 +184,14 @@ const startTimer = async (gameId, io) => {
             if (timeLeft <= 0) {
                 clearInterval(timerInterval);
                 activeTimers.delete(gameId);
-                console.log(`⏳ Timer for game ${gameId} has ended.`);
+                console.log(`[INFO] Timer ended for game ${gameId}`);
             }
         }, 1000);
 
-        activeTimers.set(gameId, timerInterval); // Store active timer
+        activeTimers.set(gameId, timerInterval); 
 
     } catch (error) {
-        console.error("❌ Error starting timer:", error);
+        console.error("[ERROR] starting timer:", error);
     }
 };
 
@@ -192,7 +204,6 @@ const startTimer = async (gameId, io) => {
     }
 
     try {
-        // ✅ Check if game exists and is open or in progress
         const { data: game, error: gameError } = await supabase
             .from("jackpot_games")
             .select("*")
@@ -203,19 +214,17 @@ const startTimer = async (gameId, io) => {
         if (gameError) return res.status(500).json({ success: false, message: "Error fetching game." });
         if (!game) return res.status(404).json({ success: false, message: "Game not found or already finished." });
 
-        // ✅ Check if this is the first bet BEFORE inserting the new bet
         const { data: previousBets, error: previousBetsError } = await supabase
             .from("jackpot_contributions")
             .select("id")
             .eq("game_id", gameId);
 
         if (previousBetsError) {
-            console.error("❌ Error checking existing bets:", previousBetsError);
+            console.error("[ERROR] checking existing bets:", previousBetsError);
         }
 
-        const isFirstBet = !previousBets || previousBets.length === 0; // ✅ Correct first bet detection
+        const isFirstBet = !previousBets || previousBets.length === 0;
 
-        // ✅ Ensure user has not already placed a bet
         const { data: existingContribution } = await supabase
             .from("jackpot_contributions")
             .select("id")
@@ -227,7 +236,6 @@ const startTimer = async (gameId, io) => {
             return res.status(403).json({ success: false, message: "You have already made a bet" });
         }
 
-        // ✅ Insert new contribution
         const { data: contribution, error: insertError } = await supabase
             .from("jackpot_contributions")
             .insert([{ game_id: gameId, user_id, wager_amount }])
@@ -236,17 +244,14 @@ const startTimer = async (gameId, io) => {
 
         if (insertError) return res.status(500).json({ success: false, message: "Failed to insert wager" });
 
-        // ✅ Update the total pot and possibly start the game
         let updateFields = { total_pot: game.total_pot + wager_amount };
 
-        // After updating the game in the database:
         if (isFirstBet) {
-            console.log("🔥 First bet placed, starting the game!");
+            console.log(`[INFO] First bet placed for game ${gameId}. Starting game.`);
             updateFields.status = "in_progress";
             updateFields.started_at = new Date().toISOString();
         }
 
-        // Apply the update to the database
         const { data: updatedGame, error: updateGameError } = await supabase
             .from("jackpot_games")
             .update(updateFields)
@@ -262,17 +267,14 @@ const startTimer = async (gameId, io) => {
             });
         }
 
-        // If this is the first bet, broadcast that the game has started
         if (isFirstBet) {
             const io = getIo();
             io.emit("gameStarted", { game: updatedGame });
-            // Existing code to start timer and schedule game closure follows...
             startTimer(gameId, io);
             scheduleGameClosure(updatedGame, io);
         }
 
 
-        // ✅ Fetch updated list of players WITH FULL DATA
         const { data: updatedPlayers, error: fetchPlayersError } = await supabase
             .from("jackpot_contributions")
             .select(`
@@ -284,10 +286,9 @@ const startTimer = async (gameId, io) => {
             .eq("game_id", gameId);
 
         if (fetchPlayersError) {
-            console.error("❌ Error fetching updated players:", fetchPlayersError);
+            console.error("[ERROR] fetching updated players:", fetchPlayersError);
         }
 
-        // ✅ Ensure players data is correctly structured
         const formattedPlayers = updatedPlayers.map(player => ({
             user_id: player.user_id,
             email: player.users?.email || "Unknown",
@@ -296,14 +297,12 @@ const startTimer = async (gameId, io) => {
             avatar_initials: player.users?.avatar_initials || "?",
         }));
 
-        // ✅ Emit real-time event with full player details
         const io = getIo();
-        console.log("🟢 Formatted Players Data:", JSON.stringify(formattedPlayers, null, 2));
-        console.log("🟢 Emitting playerJoined event:", formattedPlayers);
+    
         io.to(gameId).emit("playerJoined", {
             gameId,
             totalPot: updateFields.total_pot,
-            players: formattedPlayers,  // ✅ Ensure full player details are sent
+            players: formattedPlayers, 
         });
 
         return res.status(200).json({
@@ -313,7 +312,7 @@ const startTimer = async (gameId, io) => {
             contribution,
         });
     } catch (error) {
-        console.error("❌ Unexpected error:", error);
+        console.error("[ERROR] Unexpected error:", error);
         return res.status(500).json({ success: false, message: "An unexpected error occurred." });
     }
 };
@@ -325,7 +324,6 @@ const startTimer = async (gameId, io) => {
 const getJackpotPlayers = async (req, res) => {
     const { gameId } = req.params;
     try {
-      // Directly fetch player contributions for the given gameId
       const { data: playerData, error: playerFetchError } = await supabase
         .from("jackpot_contributions")
         .select(`
@@ -345,13 +343,11 @@ const getJackpotPlayers = async (req, res) => {
         });
       }
   
-      // Compute the total pot by summing wager_amount for all contributions
       const totalPot = playerData.reduce(
         (sum, player) => sum + Number(player.wager_amount),
         0
       );
   
-      // Calculate each player's percentage based on their wager
       const playersWithPercentages = playerData.map((player) => ({
         user_id: player.user_id,
         email: player.users?.email || "Unknown",
@@ -400,15 +396,15 @@ const closeExpiredJackpotGames = async (gameId, io) => {
 
         const gameEndTime = new Date(game.started_at).getTime() + game.time_limit * 1000;
         if (now.getTime() < gameEndTime) {
-            console.log(`⏳ Game ${gameId} is still running. No action taken.`);
+            console.log(`[TIMER] Game ${gameId} is still running. No action taken.`);
             return;
         }
 
-        console.log(`🚨 Closing expired game ${gameId}...`);
+        console.log(`[ALERT] Closing expired game ${gameId}...`);
         const winnerResult = await selectJackpotWinner(gameId);
 
         if (winnerResult.error) {
-            console.log(`⚠️ No valid winner found for game ${gameId}. Reason: ${winnerResult.error}`);
+            console.log(`[WARNING]  No valid winner found for game ${gameId}. Reason: ${winnerResult.error}`);
             io.emit("jackpotUpdate", {
                 gameId: gameId,
                 status: "error",
@@ -423,7 +419,7 @@ const closeExpiredJackpotGames = async (gameId, io) => {
             .update({ status: "finished", finished_at: now })
             .eq("id", gameId);
 
-        console.log(`✅ Game ${gameId} closed! Winner: ${winnerId}`);
+        console.log(`[SUCCESS] Game ${gameId} closed! Winner: ${winnerId}`);
 
         io.emit("jackpotUpdate", {
             gameId: gameId,
@@ -433,15 +429,17 @@ const closeExpiredJackpotGames = async (gameId, io) => {
         });
 
     } catch (error) {
-        console.error("❌ Error closing game:", error);
+        console.error("[ERROR] closing game:", error);
     }
 };
 
 
-
+/**
+ * Securely selects a winner based on weighted wagers.
+ * Updates the game's result in the database.
+ */
 const selectJackpotWinner = async (gameId) => {
     try {
-        //Fetch players data and bets
         const {data: players, error: fetchError } = await supabase
             .from("jackpot_contributions")
             .select("user_id, wager_amount, users!inner(email)")
@@ -451,22 +449,21 @@ const selectJackpotWinner = async (gameId) => {
 
 
         if (fetchError) {
-            console.error("❌ Error fetching players:", fetchError);
+            console.error("[ERROR] fetching players:", fetchError);
             return { error: "Error fetching players." };
         }
         
         if (!players || players.length === 0) {
-            console.error(`⚠️ No players found for game ${gameId}.`);
+            console.error(`[WARNING]  No players found for game ${gameId}.`);
             return { error: "No players found." };
         }
             
 
-        //Create a weighted array based on users bets/wagers
         let weightedPool = [];
         players.forEach(player => {
 
             if (!player.users || !player.users.email) {
-                console.error(`⚠️ Missing user email for player:`, player);
+                console.error(`[WARNING]  Missing user email for player:`, player);
                 return;
             }
 
@@ -477,20 +474,18 @@ const selectJackpotWinner = async (gameId) => {
         });
 
         if (weightedPool.length === 0) {
-            console.log("❌ No valid entries in the weighted pool.");
-            return { error: "No valid players in the weighted pool." }; // ✅ Always return an object
+            console.log("[ERROR] No valid entries in the weighted pool.");
+            return { error: "No valid players in the weighted pool." }; 
         }
 
-        // Generate a cryptographically secure random index using Node.js crypto module
-        const randomBuffer = crypto.randomBytes(4); // Generate 4 random bytes
-        const randomValue = randomBuffer.readUInt32BE(0); // Convert to a 32-bit integer
-        const winnerIndex = randomValue % weightedPool.length; // Ensure it's within range
+        const randomBuffer = crypto.randomBytes(4); 
+        const randomValue = randomBuffer.readUInt32BE(0); 
+        const winnerIndex = randomValue % weightedPool.length;
 
         const {user_id: winnerId, email: winnerEmail } = weightedPool[winnerIndex];
         
 
 
-        //Update supabase jackpot_games table with result of the winner
         const {error: updateError} = await supabase
             .from("jackpot_games")
             .update({result: winnerId})
@@ -499,11 +494,10 @@ const selectJackpotWinner = async (gameId) => {
             .maybeSingle();  
 
         if (updateError) {
-            console.error("❌ Error updating game with winner:", updateError);
+            console.error("[ERROR] updating game with winner:", updateError);
             return { error: "Failed to update winner in the database." };
         } 
 
-        //Fetch winners email/username for better clear winner
         const {data: winnerData, error: winnerError } = await supabase
             .from("users")
             .select("email")
@@ -516,15 +510,19 @@ const selectJackpotWinner = async (gameId) => {
         }
 
 
-        console.log(`🎉 Jackpot Winner Selected: ${winnerData.email} (${winnerId}) for Game ${gameId}`);
+        console.log(`[COMPLETE] Jackpot Winner Selected: ${winnerData.email} (${winnerId}) for Game ${gameId}`);
         return { winnerId, winnerEmail: winnerData.email };
 
     } catch (error) {
-        console.error("❌ Unexpected error selecting jackpot winner:", error);
+        console.error("[ERROR] Unexpected error selecting jackpot winner:", error);
         return { error: error.message };
     }
 };
 
+/**
+ * Schedules closure of a running game after its time limit expires.
+ * Picks a winner and emits the final game result to clients.
+ */
 const scheduleGameClosure = async (game, io) => {
     const gameEndTime = new Date(game.started_at).getTime() + game.time_limit * 1000;
     const now = Date.now();
@@ -534,11 +532,11 @@ const scheduleGameClosure = async (game, io) => {
     }
 
     setTimeout(async () => {
-      console.log(`⏳ Game ${game.id} time expired. Closing game...`);
+      console.log(`[TIMER] Game ${game.id} time expired. Closing game...`);
       const winnerResult = await selectJackpotWinner(game.id);
       
       if (winnerResult.error) {
-        console.log(`⚠️ No valid winner found for game ${game.id}. Reason: ${winnerResult.error}`);
+        console.log(`[WARNING]  No valid winner found for game ${game.id}. Reason: ${winnerResult.error}`);
         io.emit("jackpotUpdate", {
           gameId: game.id,
           status: "error",
@@ -550,7 +548,6 @@ const scheduleGameClosure = async (game, io) => {
       const winnerId = winnerResult.winnerId;
       const nowDate = new Date();
 
-      // Update game status in the database
       const { error: updateError } = await supabase
         .from("jackpot_games")
         .update({
@@ -561,11 +558,11 @@ const scheduleGameClosure = async (game, io) => {
         .eq("id", game.id);
       
       if (updateError) {
-        console.error(`❌ Error closing game ${game.id}:`, updateError);
+        console.error(`[ERROR] closing game ${game.id}:`, updateError);
         return;
       }
       
-      console.log(`✅ Game ${game.id} finished! Winner: ${winnerId}`);
+      console.log(`[SUCCESS] Game ${game.id} finished! Winner: ${winnerId}`);
       io.emit("jackpotUpdate", {
         gameId: game.id,
         status: "finished",
@@ -573,10 +570,8 @@ const scheduleGameClosure = async (game, io) => {
         message: `Game finished! Winner: ${winnerId}`,
       });
 
-      // Compute animation start time
       const animationStartTime = Date.now();
 
-      // 🔥 Ensure Players Data Exists
       const { data: playersData, error: playersError } = await supabase
         .from("jackpot_contributions")
         .select(`
@@ -587,59 +582,52 @@ const scheduleGameClosure = async (game, io) => {
         .eq("game_id", game.id);
 
       if (playersError || !playersData) {
-        console.error("❌ Error fetching players for tape computation:", playersError);
+        console.error("[ERROR] fetching players for tape computation:", playersError);
         return;
       }
 
-      // 🔹 Ensure we have a valid winner email
       if (!winnerResult.winnerEmail) {
-        console.error("❌ No valid winner email found.");
+        console.error("[ERROR] No valid winner email found.");
         return;
       }
 
-      // Format players to include an email field
       const formattedPlayers = playersData.map(player => ({
         user_id: player.user_id,
         email: player.users?.email || "unknown",
         wager_amount: player.wager_amount,
       }));
 
-      // Compute Target Offset
       const targetOffset = computeTargetOffset(formattedPlayers, winnerResult.winnerEmail);
 
-      // 🔥 Ensure Target Offset is Not Null
       if (targetOffset === null) {
-        console.error("❌ Failed to compute target offset. Aborting animation update.");
+        console.error("[ERROR] Failed to compute target offset. Aborting animation update.");
         return;
       }
 
-      console.log(`🎯 Sending targetOffset to frontend: ${targetOffset}`);
+      console.log(`[OFFSET]  Sending targetOffset to frontend: ${targetOffset}`);
 
-        // 🔥 Ensure global tracking object is initialized
         if (!globalThis.hasUpdatedAnimationTime) {
             globalThis.hasUpdatedAnimationTime = {};
         }
 
         if (globalThis.hasUpdatedAnimationTime[game.id]) {
-            console.warn(`⚠️ Skipping duplicate updateAnimationTime for Game ${game.id}`);
+            console.warn(`[WARNING]  Skipping duplicate updateAnimationTime for Game ${game.id}`);
             return;
         }
 
-        // ✅ Mark this game as updated (store timestamp)
         globalThis.hasUpdatedAnimationTime[game.id] = Date.now();
 
 
 
-      // 🔥 Send Animation Update with Target Offset
       await updateAnimationTime(
         { body: { gameId: game.id, animationStartTime, targetOffset } },
         {
           status: (code) => ({
             json: (data) => {
               if (code === 200) {
-                console.log("🎉 Animation time and offset updated successfully!");
+                console.log("[COMPLETE] Animation time and offset updated successfully!");
               } else {
-                console.error("❌ Failed to update animation time/offset:", data);
+                console.error("[ERROR] Failed to update animation time/offset:", data);
               }
             },
           }),
@@ -663,20 +651,20 @@ const scheduleGameClosure = async (game, io) => {
       return;
     }
 
-    const io = getIo(); // 🔥 Ensure io is retrieved inside the function
+    const io = getIo(); 
 
   
     inProgressGames.forEach(game => {
-        console.log(`🔄 Rescheduling game closure for game: ${game.id}`);
+        console.log(`[RESCHEDULE] game closure for game: ${game.id}`);
         scheduleGameClosure(game, io);
     });
-    console.log("✅ Rescheduling complete.");
+    console.log("[SUCCESS] Rescheduling complete.");
 
   };
 
   const getJackpotHistory = async (req, res) => {
     try {
-        // Fetch last 10 finished jackpot games and join with users table
+       
         const { data: games, error } = await supabase
             .from("jackpot_games")
             .select(`
@@ -692,11 +680,11 @@ const scheduleGameClosure = async (game, io) => {
 
         if (error) throw error;
 
-        // Fetch winner's wager from jackpot_contributions table
+       
         const updatedGames = await Promise.all(games.map(async (game) => {
             if (!game.result) return { ...game, winner_percentage: "N/A" };
 
-            // Get the winner's total wager in this game
+            
             const { data: winnerContribution, error: contributionError } = await supabase
                 .from("jackpot_contributions")
                 .select("wager_amount")
@@ -726,7 +714,7 @@ const scheduleGameClosure = async (game, io) => {
             games: updatedGames,
         });
     } catch (error) {
-        console.error("❌ Error retrieving jackpot history:", error);
+        console.error("[ERROR] retrieving jackpot history:", error);
         res.status(500).json({
             success: false,
             message: "Failed to retrieve jackpot history. Please try again later.",
@@ -734,11 +722,15 @@ const scheduleGameClosure = async (game, io) => {
     }
 };
 
+/**
+ * Updates the animation start time and target offset in the database.
+ * Notifies clients to start jackpot animation.
+ */
 const updateAnimationTime = async (req, res) => {
     const { gameId, animationStartTime, targetOffset } = req.body;
 
     if (targetOffset == null) {  
-        console.error(`❌ updateAnimationTime: Missing targetOffset for Game ${gameId}.`);
+        console.error(`[ERROR] updateAnimationTime: Missing targetOffset for Game ${gameId}.`);
         return res.status(400).json({
             success: false,
             message: "Missing targetOffset, cannot start animation",
@@ -746,7 +738,7 @@ const updateAnimationTime = async (req, res) => {
     }
 
     try {
-        console.log(`📡 Updating animation for Game ${gameId} with Offset: ${targetOffset}`);
+        console.log(`[UPDATE]  Updating animation for Game ${gameId} with Offset: ${targetOffset}`);
 
         const isoTimestamp = new Date(animationStartTime).toISOString();
         const { error: updateError } = await supabase
@@ -755,11 +747,11 @@ const updateAnimationTime = async (req, res) => {
             .eq("id", gameId);
 
         if (updateError) {
-            console.error("❌ Error updating animation time in DB:", updateError);
+            console.error("[ERROR] updating animation time in DB:", updateError);
             return res.status(500).json({ success: false, message: "Failed to update animation time" });
         }
 
-        // ✅ Fetch the game result (winnerId)
+        
         const { data: gameData, error: fetchError } = await supabase
             .from("jackpot_games")
             .select("result")
@@ -767,17 +759,17 @@ const updateAnimationTime = async (req, res) => {
             .maybeSingle();
 
         if (fetchError || !gameData) {
-            console.error("❌ Error fetching game data:", fetchError);
+            console.error("[ERROR] fetching game data:", fetchError);
             return res.status(500).json({ success: false, message: "Failed to fetch game data" });
         }
 
-        const winnerId = gameData.result; // ✅ Now correctly defined
+        const winnerId = gameData.result; 
 
-        console.log(`🏆 Winner ID for game ${gameId}: ${winnerId}`);
+        console.log(`[WINNER]  Winner ID for game ${gameId}: ${winnerId}`);
 
         const io = getIo();
 
-        console.log(`🚀 Emitting animationStarted with targetOffset ${targetOffset}`);
+        console.log(`[EMIT] Emitting animationStarted with targetOffset ${targetOffset}`);
         io.emit("animationStarted", { gameId, winnerId, animationStartTime: isoTimestamp, targetOffset });
 
         res.status(200).json({
@@ -786,7 +778,7 @@ const updateAnimationTime = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("❌ Unexpected error updating animation time:", err);
+        console.error("[ERROR] Unexpected error updating animation time:", err);
         res.status(500).json({
             success: false,
             message: "Unexpected error occurred",

@@ -1,7 +1,20 @@
+/**
+ * Authentication Controller
+ * -------------------------
+ * Handles:
+ *  - User login
+ *  - Password verification
+ *  - JWT token generation
+ */
+
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const supabase = require("../utils/supabaseClient");
 
+/**
+ * Logs in a user by verifying credentials.
+ * Returns a signed JWT token if successful.
+ */
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
@@ -10,7 +23,6 @@ const loginUser = async (req, res) => {
   }
 
   try {
-    // Check if user exists in Supabase
     const { data: user, error } = await supabase
       .from("users")
       .select("id, email, password")
@@ -21,13 +33,11 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid email or password." });
     }
 
-    // Compare passwords
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ success: false, message: "Invalid email or password." });
     }
 
-    // Generate JWT token
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
 
     res.status(200).json({
