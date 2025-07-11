@@ -25,10 +25,16 @@ export const GamesProvider = ({ children }) => {
    * Fetches all games from the backend API.
    */  
   const fetchGames = async () => {
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      console.warn("[INFO] No auth token found, skipping fetchGames call.");
+      return;
+    }
+
     try {
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/games/all`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          Authorization: `Bearer ${token}`,
         },
       });
       const data = await response.json();
@@ -51,37 +57,36 @@ export const GamesProvider = ({ children }) => {
     }
   };
   
-
-/**
-   * Sets up real-time updates from Supabase on mount.
+  /**
+   * Sets up initial fetch and real-time updates from Supabase on mount.
    */
   useEffect(() => {
-    fetchGames(); 
-  
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      fetchGames();
+    } else {
+      console.log("[INFO] User not logged in, skipping initial fetchGames.");
+    }
+
     const channel = supabase
       .channel("games")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "games" },
         (payload) => {
-  
           if (!payload.new.created_at) {
-            console.warn(`[WARNING]  Game ${payload.new.id} missing created_at in real-time update!`);
-          } else {
+            console.warn(`[WARNING] Game ${payload.new.id} missing created_at in real-time update!`);
           }
-  
-          fetchGames(); 
+          fetchGames();
         }
       )
       .subscribe();
-  
+
     return () => {
       supabase.removeChannel(channel);
     };
   }, []);
   
-  
-
   return (
     <GamesContext.Provider value={{ games, setGames, fetchGames }}>
       {children}
