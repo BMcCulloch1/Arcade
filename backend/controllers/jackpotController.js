@@ -14,61 +14,86 @@ const CARD_WIDTH = 80;
 const CONTAINER_WIDTH = 400;
 const TAPE_LENGTH = 100; 
 
+// Seedable PRNG
+function mulberry32(a) {
+  return function() {
+    let t = (a += 0x6D2B79F5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Deterministic shuffle using seed
+function shuffleWithSeed(array, seed) {
+  const rng = mulberry32(seed);
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
+
 // Global flag to track animation updates
 globalThis.hasUpdatedAnimationTime = {};
 
 
 /**
- * Calculates the target offset for the jackpot animation.
- * This ensures the winning player's avatar lands in the center.
+ * Builds exactly TAPE_LENGTH tape with wager proportions,
+ * shuffles with seed, and returns winnerIndex & targetOffset.
  */
-const computeTargetOffset = (players, winnerEmail) => {
-    if (!players || players.length === 0) {
-        console.error("[ERROR] No players available for target offset.");
-        return null;
-    }
+const computeWinnerOffsetAndIndex = (players, winnerEmail, seed) => {
+  if (!players || players.length === 0) {
+    console.error("[ERROR] No players available for offset computation.");
+    return null;
+  }
 
-    console.log(`[DEBUG] Computing offset for winner: ${winnerEmail}`);
+  const totalWager = players.reduce((acc, p) => acc + Number(p.wager_amount), 0);
+  if (totalWager <= 0) {
+    console.error("[ERROR] Total wager is zero.");
+    return null;
+  }
 
-    const totalWager = players.reduce((acc, player) => acc + Number(player.wager_amount), 0);
-    let weightedProfiles = [];
+  // 1️⃣ Build weighted tape of exactly TAPE_LENGTH
+  let tape = [];
+  let remainder = TAPE_LENGTH;
+  players.forEach((player, idx) => {
+    let count = Math.round((player.wager_amount / totalWager) * TAPE_LENGTH);
+    if (count < 1) count = 1;
+    tape.push(...Array(count).fill(player));
+    remainder -= count;
+  });
+  // Fix rounding errors
+  while (remainder > 0) {
+    tape.push(players[0]); remainder--;
+  }
+  while (remainder < 0) {
+    tape.pop(); remainder++;
+  }
 
-    players.forEach(player => {
-        const weight = Math.max(Math.round((Number(player.wager_amount) / totalWager) * 100), 1);
-        for (let i = 0; i < weight; i++) {
-            weightedProfiles.push(player);
-        }
-    });
+  console.log(`[DEBUG] Built tape length = ${tape.length}`);
 
-    weightedProfiles.sort((a, b) => a.email.localeCompare(b.email));
 
-    let tape = [];
-    for (let i = 0; i < 5; i++) {
-        tape = tape.concat(weightedProfiles);
-    }
+  // 2️⃣ Shuffle with seed
+  shuffleWithSeed(tape, seed);
 
-    const winnerIndices = tape.reduce((acc, player, index) => {
-        if (String(player.email).trim().toLowerCase() === String(winnerEmail).trim().toLowerCase()) {
-            acc.push(index);
-        }
-        return acc;
-    }, []);
+  // 3️⃣ Find winner index
+  const winnerIndex = tape.findIndex(p => 
+    String(p.email).trim().toLowerCase() === String(winnerEmail).trim().toLowerCase()
+  );
 
-    if (winnerIndices.length === 0) {
-        console.error("[ERROR] No winner indices found for:", winnerEmail);
-        return null;
-    }
+  if (winnerIndex === -1) {
+    console.error("[ERROR] Winner not found in shuffled tape!");
+    return null;
+  }
 
-    const targetIndex = winnerIndices[Math.floor(winnerIndices.length / 2)];
-    const targetOffset = targetIndex * CARD_WIDTH - CONTAINER_WIDTH / 2 + CARD_WIDTH / 2;
+  // 4️⃣ Compute offset to center
+  const targetOffset = winnerIndex * CARD_WIDTH - (CONTAINER_WIDTH / 2 - CARD_WIDTH / 2);
 
-    // Scale the target offset to match the normalized tape length
-    const scalingFactor = tape.length / TAPE_LENGTH;
-    const scaledTargetOffset = targetOffset / scalingFactor;
-
-    console.log(`[DEBUG] Computed target offset: ${scaledTargetOffset}`);
-    return scaledTargetOffset;
+  console.log(`[DEBUG] WinnerIndex=${winnerIndex} TargetOffset=${targetOffset}`);
+  return { winnerIndex, targetOffset };
 };
+
 
 
 
@@ -597,12 +622,23 @@ const scheduleGameClosure = async (game, io) => {
         wager_amount: player.wager_amount,
       }));
 
-      const targetOffset = computeTargetOffset(formattedPlayers, winnerResult.winnerEmail);
+      // Generate random seed
+      const seedBuffer = crypto.randomBytes(4);
+      const seed = seedBuffer.readUInt32BE(0);
 
-      if (targetOffset === null) {
+      // Compute winnerIndex and targetOffset with seed
+      const offsetResult = computeWinnerOffsetAndIndex(formattedPlayers, winnerResult.winnerEmail, seed);
+
+
+      if (!offsetResult) {
         console.error("[ERROR] Failed to compute target offset. Aborting animation update.");
         return;
       }
+
+      const { winnerIndex, targetOffset } = offsetResult;
+
+      console.log(`[OFFSET]  Sending targetOffset=${targetOffset} winnerIndex=${winnerIndex} seed=${seed}`);
+
 
       console.log(`[OFFSET]  Sending targetOffset to frontend: ${targetOffset}`);
 
@@ -620,7 +656,7 @@ const scheduleGameClosure = async (game, io) => {
 
 
       await updateAnimationTime(
-        { body: { gameId: game.id, animationStartTime, targetOffset } },
+        { body: { gameId: game.id, animationStartTime, targetOffset, seed, winnerIndex } },
         {
           status: (code) => ({
             json: (data) => {
@@ -727,64 +763,55 @@ const scheduleGameClosure = async (game, io) => {
  * Notifies clients to start jackpot animation.
  */
 const updateAnimationTime = async (req, res) => {
-    const { gameId, animationStartTime, targetOffset } = req.body;
+  const { gameId, animationStartTime, targetOffset, seed, winnerIndex } = req.body;
 
-    if (targetOffset == null) {  
-        console.error(`[ERROR] updateAnimationTime: Missing targetOffset for Game ${gameId}.`);
-        return res.status(400).json({
-            success: false,
-            message: "Missing targetOffset, cannot start animation",
-        });
-    }
+  if (targetOffset == null) {
+    console.error(`[ERROR] updateAnimationTime: Missing targetOffset for Game ${gameId}.`);
+    return res.status(400).json({
+      success: false,
+      message: "Missing targetOffset, cannot start animation",
+    });
+  }
 
-    try {
-        console.log(`[UPDATE]  Updating animation for Game ${gameId} with Offset: ${targetOffset}`);
+  try {
+    // Save animation time in DB (optional)
+    const isoTimestamp = new Date(animationStartTime).toISOString();
+    await supabase
+      .from("jackpot_games")
+      .update({ animation_start_time: isoTimestamp })
+      .eq("id", gameId);
 
-        const isoTimestamp = new Date(animationStartTime).toISOString();
-        const { error: updateError } = await supabase
-            .from("jackpot_games")
-            .update({ animation_start_time: isoTimestamp })
-            .eq("id", gameId);
+    const { data: gameData } = await supabase
+      .from("jackpot_games")
+      .select("result")
+      .eq("id", gameId)
+      .maybeSingle();
 
-        if (updateError) {
-            console.error("[ERROR] updating animation time in DB:", updateError);
-            return res.status(500).json({ success: false, message: "Failed to update animation time" });
-        }
+    const winnerId = gameData?.result;
 
-        
-        const { data: gameData, error: fetchError } = await supabase
-            .from("jackpot_games")
-            .select("result")
-            .eq("id", gameId)
-            .maybeSingle();
+    const io = getIo();
+    io.emit("animationStarted", {
+      gameId,
+      winnerId,
+      animationStartTime: isoTimestamp,
+      targetOffset,
+      seed,
+      winnerIndex
+    });
 
-        if (fetchError || !gameData) {
-            console.error("[ERROR] fetching game data:", fetchError);
-            return res.status(500).json({ success: false, message: "Failed to fetch game data" });
-        }
-
-        const winnerId = gameData.result; 
-
-        console.log(`[WINNER]  Winner ID for game ${gameId}: ${winnerId}`);
-
-        const io = getIo();
-
-        console.log(`[EMIT] Emitting animationStarted with targetOffset ${targetOffset}`);
-        io.emit("animationStarted", { gameId, winnerId, animationStartTime: isoTimestamp, targetOffset });
-
-        res.status(200).json({
-            success: true,
-            message: "Animation time updated successfully",
-        });
-
-    } catch (err) {
-        console.error("[ERROR] Unexpected error updating animation time:", err);
-        res.status(500).json({
-            success: false,
-            message: "Unexpected error occurred",
-        });
-    }
+    res.status(200).json({
+      success: true,
+      message: "Animation time updated successfully",
+    });
+  } catch (err) {
+    console.error("[ERROR] Unexpected error updating animation time:", err);
+    res.status(500).json({
+      success: false,
+      message: "Unexpected error occurred",
+    });
+  }
 };
+
 
 
 

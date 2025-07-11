@@ -42,6 +42,8 @@ const Jackpot = () => {
   const [phase, setPhase] = useState("playing");
   const phaseRef = useRef(phase);
   const tapeRef = useRef(null);
+  const [seed, setSeed] = useState(null);
+
 
 
 
@@ -278,6 +280,7 @@ const Jackpot = () => {
           animationStartTimeFromServer={animationStartTime}
           serverTargetOffset={serverTargetOffset}
           tapeRef={tapeRef}
+          seed={seed}
         />
       );
     }
@@ -490,6 +493,7 @@ useEffect(() => {
       setWinner(winnerDetails);
       setAnimationStartTime(adjustedTimestamp);
       setServerTargetOffset(data.targetOffset);
+      setSeed(data.seed);  
       setPhase("animating");
     }
   };

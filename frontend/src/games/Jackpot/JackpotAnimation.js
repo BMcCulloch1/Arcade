@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useCallback, useMemo } from "react";
+import { shuffleWithSeed } from "../../utils/shuffleWithSeed";
+
 
 const CARD_WIDTH = 80;
 const CONTAINER_WIDTH = 400;
@@ -13,7 +15,8 @@ const JackpotAnimation = ({
   startAnimation,
   onAnimationEnd,
   animationStartTimeFromServer,
-  tapeRef
+  tapeRef,
+  seed
 }) => {
   const containerRef = useRef(null);
   const animFrameRef = useRef(null);
@@ -49,11 +52,9 @@ const JackpotAnimation = ({
       for (let i = 0; i < slots; i++) pool.push(p);
     });
 
-    // 2) Shuffle for suspense
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [pool[i], pool[j]] = [pool[j], pool[i]];
-    }
+    //Shuffle using server seed
+    shuffleWithSeed(pool, seed);
+
 
     // 3) Tile to exactly TAPE_LENGTH
     let tape = [];
