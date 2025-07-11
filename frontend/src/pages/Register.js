@@ -60,7 +60,7 @@ function Register() {
         onSubmit={handleSubmit}
         className="bg-white p-8 rounded shadow-md w-96"
       >
-        <h2 className="text-xl font-bold mb-4 text-center text-blue-500">
+        <h2 className="text-xl  font-bold  mb-4 text-center text-blue-500">
           Register
         </h2>
         {error && (
@@ -80,7 +80,7 @@ function Register() {
           <input
             type="email"
             id="email"
-            className="w-full mt-1 p-2 border rounded focus:outline-none focus:ring focus:ring-blue-300"
+            className="w-full mt-1 p-2 border rounded text-black focus:outline-none focus:ring focus:ring-blue-300"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -93,7 +93,7 @@ function Register() {
           <input
             type="password"
             id="password"
-            className="w-full mt-1 p-2 border rounded focus:outline-none focus:ring focus:ring-blue-300"
+            className="w-full mt-1 p-2 border rounded text-black focus:outline-none focus:ring focus:ring-blue-300"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -109,7 +109,7 @@ function Register() {
           <input
             type="password"
             id="confirm-password"
-            className="w-full mt-1 p-2 border rounded focus:outline-none focus:ring focus:ring-blue-300"
+            className="w-full mt-1 p-2 border rounded text-black focus:outline-none focus:ring focus:ring-blue-300"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
