@@ -67,6 +67,8 @@ const JackpotAnimation = ({
     let tape = [];
     for (let i = 0; i < LOOPS; i++) {
       tape = tape.concat(pool);
+      console.log("[DEBUG] Winner found at index:", i);
+
     }
 
 
@@ -75,6 +77,9 @@ const JackpotAnimation = ({
     const winIdx = tape.findIndex((p) => String(p.user_id) === String(winnerId));
     const centerCorrection = CONTAINER_WIDTH / 2 - CARD_WIDTH / 2;
     localOffsetRef.current = winIdx * CARD_WIDTH - centerCorrection;
+    console.log("[DEBUG] winIdx =", winIdx);
+    console.log("[DEBUG] localOffsetRef =", localOffsetRef.current);
+
 
     // 5) Render DOM
     tapeRef.current.innerHTML = "";
