@@ -74,7 +74,7 @@ function Register() {
           </p>
         )}
         <div className="mb-4">
-          <label htmlFor="email" className="block text-sm font-medium">
+          <label htmlFor="email" className="block text-sm font-medium text-black">
             Email
           </label>
           <input
@@ -87,7 +87,7 @@ function Register() {
           />
         </div>
         <div className="mb-4">
-          <label htmlFor="password" className="block text-sm font-medium">
+          <label htmlFor="password" className="block text-sm font-medium text-black">
             Password
           </label>
           <input
@@ -102,7 +102,7 @@ function Register() {
         <div className="mb-4">
           <label
             htmlFor="confirm-password"
-            className="block text-sm font-medium"
+            className="block text-sm font-medium text-black"
           >
             Confirm Password
           </label>
