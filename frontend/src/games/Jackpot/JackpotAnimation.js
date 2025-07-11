@@ -46,6 +46,9 @@ const JackpotAnimation = ({
   useEffect(() => {
     if (!tapeRef.current || !players?.length || hasRenderedRef.current) return;
 
+    const LOOPS = 5;  
+
+
     // 1) Build weighted pool
     const total = players.reduce((sum, p) => sum + Number(p.wager_amount), 0);
     let pool = [];
