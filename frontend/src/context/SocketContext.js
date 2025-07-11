@@ -3,7 +3,7 @@ import { io } from "socket.io-client";
 
 export const SocketContext = createContext();
 
-const socket = io("REACT_APP_BACKEND_URL", {
+const socket = io(process.env.REACT_APP_BACKEND_URL, {
   transports: ["websocket"],
   autoConnect: true,
   reconnection: true,
