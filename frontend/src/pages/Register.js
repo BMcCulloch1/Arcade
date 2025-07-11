@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "../utils/axios";
+
 
 function Register() {
   const [email, setEmail] = useState("");
@@ -11,50 +13,46 @@ function Register() {
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setSuccessMessage("");
+  e.preventDefault();
+  setError("");
+  setSuccessMessage("");
 
-    if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
-      setError("All fields are required.");
-      return;
-    }
+  if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
+    setError("All fields are required.");
+    return;
+  }
 
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
+  if (password !== confirmPassword) {
+    setError("Passwords do not match.");
+    return;
+  }
 
-    setIsLoading(true);
+  setIsLoading(true);
 
-    try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
+  try {
+    const { data } = await axios.post("/api/auth/register", {
+      email,
+      password,
+    });
 
-      const data = await response.json();
+    setSuccessMessage("Registration successful! You can now log in.");
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
 
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to register");
-      }
+    setTimeout(() => navigate("/login"), 2000);
+  } catch (err) {
+    console.error("Error during registration:", err);
+    setError(
+      err.response?.data?.message ||
+      err.message ||
+      "An error occurred. Please try again later."
+    );
+  } finally {
+    setIsLoading(false);
+  }
+};
 
-      setSuccessMessage("Registration successful! You can now log in.");
-      setEmail("");
-      setPassword("");
-      setConfirmPassword("");
-
-      setTimeout(() => navigate("/login"), 2000);
-    } catch (err) {
-      console.error("Error during registration:", err);
-      setError(err.message || "An error occurred. Please try again later.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">

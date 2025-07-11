@@ -34,6 +34,11 @@ app.use("/api/games", gameRoutes);
 app.use("/api/jackpot", jackpotRoutes);
 app.use("/api/time", timeRoutes);
 
+// Add a root path for debugging
+app.get("/", (req, res) => {
+  res.send("✅ Arcade Backend API is running!");
+});
+
 
 // Handle Socket.IO connections
 io.on("connection", (socket) => {

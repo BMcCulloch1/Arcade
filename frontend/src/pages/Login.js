@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "../utils/axios";
+
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -9,43 +11,36 @@ function Login() {
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError(""); 
+  e.preventDefault();
+  setError(""); 
 
-    if (!email.trim() || !password.trim()) {
-      setError("Please enter both email and password.");
-      return;
-    }
+  if (!email.trim() || !password.trim()) {
+    setError("Please enter both email and password.");
+    return;
+  }
 
-    setIsLoading(true);
+  setIsLoading(true);
 
-    try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
+  try {
+    const { data } = await axios.post("/api/auth/login", { email, password });
 
-      const data = await response.json();
+    console.log("Login Successful:", data);
 
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to log in");
-      }
+    localStorage.setItem("authToken", data.token);
 
-      console.log("Login Successful:", data);
+    navigate("/home");
+  } catch (err) {
+    console.error("Error during login:", err);
+    setError(
+      err.response?.data?.message ||
+      err.message ||
+      "An error occurred. Please try again later."
+    );
+  } finally {
+    setIsLoading(false); 
+  }
+};
 
-      localStorage.setItem("authToken", data.token);
-
-      navigate("/home");
-    } catch (err) {
-      console.error("Error during login:", err);
-      setError(err.message || "An error occurred. Please try again later.");
-    } finally {
-      setIsLoading(false); 
-    }
-  };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
