@@ -149,7 +149,7 @@ const WatchGameModal = ({ game, onClose, onAnimationComplete }) => {
 
         {phase === "result" && (
           <p className="mt-6 text-xl font-bold text-green-500 text-center">
-            [WINNER]  Winner: {winnerEmail || "Unknown"}
+            Winner: {winnerEmail || "Unknown"}
           </p>
         )}
         <button
