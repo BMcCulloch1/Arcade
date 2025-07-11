@@ -86,7 +86,7 @@ const JackpotAnimation = ({
     );
     console.log("[DEBUG] winIdx =", winIdx);
 
-    const randomShift = Math.floor(Math.random() * CARD_WIDTH);
+    const randomShift = Math.random() * CARD_WIDTH;
     localOffsetRef.current = winIdx * CARD_WIDTH - CONTAINER_WIDTH / 2 + randomShift;
     console.log("[DEBUG] localOffsetRef =", localOffsetRef.current);
 
