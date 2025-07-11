@@ -52,6 +52,11 @@ const JackpotAnimation = ({
       for (let i = 0; i < slots; i++) pool.push(p);
     });
 
+    if (!seed) {
+      console.error("[ERROR] Missing seed from server — cannot shuffle deterministically!");
+      return;
+    }
+
     //Shuffle using server seed
     shuffleWithSeed(pool, seed);
 
