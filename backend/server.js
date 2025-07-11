@@ -36,7 +36,7 @@ app.use("/api/time", timeRoutes);
 
 // Add a root path for debugging
 app.get("/", (req, res) => {
-  res.send("✅ Arcade Backend API is running!");
+  res.send("Arcade Backend API is running!");
 });
 
 
