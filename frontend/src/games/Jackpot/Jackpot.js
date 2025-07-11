@@ -41,6 +41,8 @@ const Jackpot = () => {
   const [animationStartTime, setAnimationStartTime] = useState(null);
   const [phase, setPhase] = useState("playing");
   const phaseRef = useRef(phase);
+  const tapeRef = useRef(null);
+
 
 
   // Other refs for game logic
@@ -275,6 +277,7 @@ const Jackpot = () => {
           onAnimationEnd={handleAnimationEnd}
           animationStartTimeFromServer={animationStartTime}
           serverTargetOffset={serverTargetOffset}
+          tapeRef={tapeRef}
         />
       );
     }
