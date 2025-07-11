@@ -43,7 +43,7 @@ function Navigation() {
           >
             Jackpot
           </NavLink>
-          <NavLink
+          {/* <NavLink
             to="/game-3"
             className={({ isActive }) =>
               isActive
@@ -62,7 +62,7 @@ function Navigation() {
             }
           >
             Game 4
-          </NavLink>
+          </NavLink> */}
           <NavLink
             to="/profile"
             className={({ isActive }) =>

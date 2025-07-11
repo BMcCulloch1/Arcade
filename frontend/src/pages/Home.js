@@ -46,8 +46,7 @@ function Home() {
 
   return (
     <div className="text-center">
-      <h1 className="text-4xl font-bold">Welcome to CoinToss, {userData.name}!</h1>
-      <p className="mt-4 text-lg">Your email: {userData.email}</p>
+      <h1 className="text-4xl font-bold">Welcome to CoinToss!</h1>
       <p className="mt-2">Choose a game to play from the menu.</p>
     </div>
   );
