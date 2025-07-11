@@ -116,20 +116,37 @@ const WatchGameModal = ({ game, onClose, onAnimationComplete }) => {
         </button>
         <h2 className="text-2xl font-bold mb-4 text-center">Coin Toss</h2>
         <div className="flex items-center justify-between w-full mb-4">
-          <div className="text-red-500 font-semibold text-center w-1/3">
-            <p>Creator</p>
-            {/* Replace user ID with email */}
-            <p>{game.creator_email}</p>
-          </div>
-          <div className="w-1/3 flex justify-center">
-            {content}
-          </div>
-          <div className="text-blue-500 font-semibold text-center w-1/3">
-            <p>Opponent</p>
-            {/* Replace user ID with email; show placeholder if missing */}
-            <p>{game.opponent_email ? game.opponent_email : "???"}</p>
-          </div>
+          { (game.creator_choice || "").toLowerCase() === "heads" ? (
+            <>
+              <div className="text-red-500 font-semibold text-center w-1/3">
+                <p>Creator (Heads)</p>
+                <p>{game.creator_email}</p>
+              </div>
+              <div className="w-1/3 flex justify-center">
+                {content}
+              </div>
+              <div className="text-blue-500 font-semibold text-center w-1/3">
+                <p>Opponent (Tails)</p>
+                <p>{game.opponent_email || "???"}</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-red-500 font-semibold text-center w-1/3">
+                <p>Opponent (Heads)</p>
+                <p>{game.opponent_email || "???"}</p>
+              </div>
+              <div className="w-1/3 flex justify-center">
+                {content}
+              </div>
+              <div className="text-blue-500 font-semibold text-center w-1/3">
+                <p>Creator (Tails)</p>
+                <p>{game.creator_email}</p>
+              </div>
+            </>
+          )}
         </div>
+
         {phase === "result" && (
           <p className="mt-6 text-xl font-bold text-green-500 text-center">
             [WINNER]  Winner: {winnerEmail || "Unknown"}
