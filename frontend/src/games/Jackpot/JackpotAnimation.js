@@ -58,26 +58,33 @@ const JackpotAnimation = ({
       console.error("[ERROR] Missing seed from server — cannot shuffle deterministically!");
       return;
     }
-
-    //Shuffle using server seed
+    // 2️⃣ Shuffle using server seed
     shuffleWithSeed(pool, seed);
+    console.log("[DEBUG] pool.length =", pool.length);
 
-    // Build tape with multiple loops
-    const LOOPS = 5;  // or whatever number you want
+    // 3️⃣ Build tape with multiple loops of the same shuffle
+    const singleShuffle = pool.slice();
     let tape = [];
     for (let i = 0; i < LOOPS; i++) {
-      tape = tape.concat(pool);
-      console.log("[DEBUG] Winner found at index:", i);
-
+      tape = tape.concat(singleShuffle);
     }
+    console.log("[DEBUG] Final tape length =", tape.length);
 
+    // 4️⃣ Debug where winner occurs in the tape
+    tape.forEach((p, i) => {
+      if (String(p.user_id) === String(winnerId)) {
+        console.log("[DEBUG] Winner found at index:", i);
+      }
+    });
 
+    // 5️⃣ Compute offset so winner lands in center
+    const winIdx = tape.lastIndexOf(
+      tape.find((p) => String(p.user_id) === String(winnerId))
+    );
+    console.log("[DEBUG] winIdx =", winIdx);
 
-    // 4) Compute offset so winner lands in center
-    const winIdx = tape.findIndex((p) => String(p.user_id) === String(winnerId));
     const centerCorrection = CONTAINER_WIDTH / 2 - CARD_WIDTH / 2;
     localOffsetRef.current = winIdx * CARD_WIDTH - centerCorrection;
-    console.log("[DEBUG] winIdx =", winIdx);
     console.log("[DEBUG] localOffsetRef =", localOffsetRef.current);
 
 
