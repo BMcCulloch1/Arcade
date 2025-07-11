@@ -6,8 +6,10 @@ const CARD_WIDTH = 80;
 const CONTAINER_WIDTH = 400;
 const TAPE_LENGTH = 100;
 
-// Easing for smooth deceleration
-const easeOut = (t) => 1 - Math.pow(1 - t, 5);
+// Spinning tape motion 
+const easeOutExpo = (t) =>
+  t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+
 
 const JackpotAnimation = ({
   players,
@@ -60,11 +62,14 @@ const JackpotAnimation = ({
     //Shuffle using server seed
     shuffleWithSeed(pool, seed);
 
-
-    // 3) Tile to exactly TAPE_LENGTH
+    // Build tape with multiple loops
+    const LOOPS = 5;  // or whatever number you want
     let tape = [];
-    while (tape.length < TAPE_LENGTH) tape = tape.concat(pool);
-    tape = tape.slice(0, TAPE_LENGTH);
+    for (let i = 0; i < LOOPS; i++) {
+      tape = tape.concat(pool);
+    }
+
+
 
     // 4) Compute offset so winner lands in center
     const winIdx = tape.findIndex((p) => String(p.user_id) === String(winnerId));
@@ -108,7 +113,7 @@ const JackpotAnimation = ({
     const animate = () => {
       const elapsed = Date.now() - startTime;
       const t = Math.max(0, Math.min(elapsed / duration, 1));
-      const offset = localOffsetRef.current * easeOut(t);
+      const offset = localOffsetRef.current * easeOutExpo(t);
       tapeRef.current.style.transform = `translateX(-${offset}px)`;
       if (t < 1) {
         animFrameRef.current = requestAnimationFrame(animate);
