@@ -524,7 +524,7 @@ useEffect(() => {
     >
       {/* Game Title */}
       <h1 className="text-4xl font-extrabold text-center mb-6 neon-text">
-        🎰 Jackpot Game
+         Jackpot Game
       </h1>
   
       <div className="flex flex-col md:flex-row gap-6">
