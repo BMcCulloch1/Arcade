@@ -8,8 +8,6 @@ A full-stack demo app with two real-time multiplayer games built using React and
 - Real-time games:
   - Coin Toss
   - Jackpot (with animated drawing)
-  - Game3
-  - Game4
 - User profiles
 - Live updates via Socket.IO
 - Supabase for database and auth
