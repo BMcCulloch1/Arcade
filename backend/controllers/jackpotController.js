@@ -54,7 +54,7 @@ const computeWinnerOffsetAndIndex = (players, winnerEmail, seed) => {
     return null;
   }
 
-  // 1️⃣ Build weighted tape of exactly TAPE_LENGTH
+  // Build weighted tape of exactly TAPE_LENGTH
   let tape = [];
   let remainder = TAPE_LENGTH;
   players.forEach((player, idx) => {
@@ -74,10 +74,10 @@ const computeWinnerOffsetAndIndex = (players, winnerEmail, seed) => {
   console.log(`[DEBUG] Built tape length = ${tape.length}`);
 
 
-  // 2️⃣ Shuffle with seed
+  // Shuffle with seed
   shuffleWithSeed(tape, seed);
 
-  // 3️⃣ Find winner index
+  // Find winner index
   const winnerIndex = tape.findIndex(p => 
     String(p.email).trim().toLowerCase() === String(winnerEmail).trim().toLowerCase()
   );
@@ -673,8 +673,6 @@ const scheduleGameClosure = async (game, io) => {
 };
 
 
-  
-  
 
   const scheduleExistingGames = async () => {
     const { data: inProgressGames, error } = await supabase
